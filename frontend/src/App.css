@@ -1,0 +1,1143 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f5f5f5;
+  color: #333;
+}
+
+.app {
+  min-height: 100vh;
+}
+
+/* Header */
+.header {
+  background: #722f37;
+  color: white;
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.header nav {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.header nav button {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.header nav button:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+.header nav button.active {
+  background: rgba(255,255,255,0.2);
+  border-color: white;
+}
+
+/* Main content */
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Common elements */
+.loading, .error, .empty {
+  padding: 2rem;
+  text-align: center;
+}
+
+.error {
+  color: #c00;
+  background: #fee;
+  border-radius: 4px;
+}
+
+.empty {
+  color: #666;
+}
+
+button {
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.primary-button {
+  background: #722f37;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.primary-button:hover {
+  background: #8b3d47;
+}
+
+.primary-button:disabled {
+  background: #999;
+  cursor: not-allowed;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  color: #722f37;
+  padding: 0;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.back-button:hover {
+  text-decoration: underline;
+}
+
+/* Filters */
+.filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.search-input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.color-filter {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+th, td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+th {
+  background: #f9f9f9;
+  font-weight: 600;
+}
+
+tbody tr {
+  cursor: pointer;
+}
+
+tbody tr:hover {
+  background: #f5f5f5;
+}
+
+/* Wine name cell - allow text selection */
+.wine-name-cell {
+  user-select: text;
+}
+
+.wine-name {
+  cursor: text;
+}
+
+.wine-name::selection {
+  background: #722f37;
+  color: white;
+}
+
+/* Color badges */
+.color-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.color-badge.red {
+  background: #722f37;
+  color: white;
+}
+
+.color-badge.white {
+  background: #f5f0d0;
+  color: #666;
+}
+
+.color-badge.rose {
+  background: #ffc0cb;
+  color: #666;
+}
+
+.color-badge.sparkling {
+  background: #e8d5b7;
+  color: #666;
+}
+
+/* Rating */
+.rating {
+  font-weight: 600;
+  color: #722f37;
+}
+
+.rank {
+  color: #999;
+  font-weight: 600;
+}
+
+/* Wine detail */
+.wine-detail, .vintage-detail {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.wine-header h2 {
+  margin: 0 0 0.25rem;
+  color: #722f37;
+}
+
+.wine-header h3 {
+  margin: 0 0 1rem;
+  font-weight: normal;
+}
+
+.wine-meta {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.wine-meta span {
+  color: #666;
+}
+
+.edit-button {
+  background: none;
+  border: 1px solid #ddd;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 400px;
+}
+
+.edit-form input, .edit-form select {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.edit-actions button {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+}
+
+.edit-actions button:first-child {
+  background: #722f37;
+  color: white;
+  border: none;
+}
+
+.edit-actions button:last-child {
+  background: white;
+  border: 1px solid #ddd;
+}
+
+/* Vintages list */
+.vintages-list {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.vintage-card {
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.vintage-card:hover {
+  background: #f0f0f0;
+}
+
+/* Expanded vintage card with inline tastings */
+.vintage-card-expanded {
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: 4px;
+  border-left: 3px solid #722f37;
+}
+
+.vintage-header-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.vintage-header-row .edit-button {
+  margin-left: auto;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.inline-tastings {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.inline-tasting {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+  padding: 0.5rem;
+  background: white;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.inline-tasting .tasting-date {
+  color: #666;
+  min-width: 80px;
+}
+
+.inline-tasting .rating {
+  font-weight: 600;
+  min-width: 30px;
+}
+
+.inline-tasting .tasting-notes {
+  color: #444;
+  flex: 1;
+}
+
+.vintage-year {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #722f37;
+}
+
+.vintage-info {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.tasting-count {
+  color: #666;
+}
+
+.seller-notes {
+  margin: 0.5rem 0 0;
+  color: #666;
+  font-style: italic;
+}
+
+/* Vintage detail */
+.vintage-header {
+  margin-bottom: 2rem;
+}
+
+.average-rating {
+  font-size: 1.1rem;
+  margin: 1rem 0;
+}
+
+.purchase-history {
+  margin-bottom: 2rem;
+}
+
+.purchase-history ul {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.purchase-history li {
+  margin: 0.25rem 0;
+}
+
+.theme {
+  color: #666;
+  font-style: italic;
+}
+
+/* Tastings */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.section-header h4 {
+  margin: 0;
+}
+
+.section-header button {
+  background: #722f37;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+}
+
+.add-tasting-form {
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.add-tasting-form input, .add-tasting-form textarea {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.form-actions button:first-child {
+  background: #722f37;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+}
+
+.form-actions button:last-child {
+  background: white;
+  border: 1px solid #ddd;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+}
+
+.tastings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tasting-card {
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: 4px;
+}
+
+.tasting-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tasting-date {
+  color: #666;
+}
+
+.delete-button {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 1.25rem;
+  padding: 0;
+  line-height: 1;
+}
+
+.delete-button:hover {
+  color: #c00;
+}
+
+.tasting-notes {
+  margin: 0.5rem 0 0;
+  color: #444;
+}
+
+/* Import */
+.import-input, .import-preview, .import-complete {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.import-input h2, .import-preview h2, .import-complete h2 {
+  margin-top: 0;
+  color: #722f37;
+}
+
+.format-hints {
+  background: #f9f9f9;
+  padding: 1rem 1rem 1rem 2rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.format-hints li {
+  margin: 0.25rem 0;
+}
+
+.import-input textarea {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  resize: vertical;
+}
+
+/* Preview */
+.preview-summary, .import-results {
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.preview-summary h4, .import-results h4 {
+  margin-top: 0;
+}
+
+.preview-summary ul, .import-results ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.preview-batches {
+  margin-bottom: 1rem;
+}
+
+.batch-preview {
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.batch-header {
+  margin-bottom: 0.5rem;
+}
+
+.batch-preview ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.batch-preview li {
+  margin: 0.25rem 0;
+}
+
+.item-count {
+  font-weight: normal;
+  color: #666;
+}
+
+.more-items, .more-batches {
+  color: #666;
+  font-style: italic;
+}
+
+.batch-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.preview-item {
+  background: white;
+  padding: 0.75rem;
+  border-radius: 4px;
+  border-left: 3px solid #722f37;
+}
+
+.preview-item-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.preview-item-header .price {
+  color: #2e7d32;
+}
+
+.preview-item-header .qty {
+  color: #666;
+}
+
+.preview-seller-notes {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: #f5f5f5;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.preview-tastings {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.preview-tastings ul {
+  margin: 0.25rem 0 0 0;
+  padding-left: 1.25rem;
+}
+
+.preview-tastings li {
+  color: #444;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.preview-actions button:first-child {
+  background: white;
+  border: 1px solid #ddd;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+}
+
+/* Ambiguities */
+.ambiguities {
+  background: #fff8e6;
+  border: 1px solid #ffc107;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.ambiguities h4 {
+  margin-top: 0;
+  color: #856404;
+}
+
+.amb-note {
+  color: #856404;
+  margin-bottom: 0.75rem;
+}
+
+.ambiguity-item {
+  background: white;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.amb-type {
+  font-weight: 600;
+  color: #856404;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.amb-message {
+  margin: 0.25rem 0;
+}
+
+.amb-context {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #666;
+  background: #f5f5f5;
+  padding: 0.25rem 0.5rem;
+  border-radius: 2px;
+}
+
+.amb-suggestion {
+  font-size: 0.85rem;
+  color: #28a745;
+}
+
+/* Existing matches */
+.existing-matches {
+  background: #e8f4fd;
+  border: 1px solid #4a90d9;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.existing-matches h4 {
+  margin-top: 0;
+  color: #1e5a99;
+}
+
+.match-note {
+  color: #1e5a99;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.match-item {
+  background: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 0.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.match-message {
+  font-size: 0.85rem;
+  color: #1e5a99;
+  margin-top: 0.25rem;
+}
+
+/* Favorites */
+.favorites h2 {
+  margin-top: 0;
+  color: #722f37;
+}
+
+.favorites-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.view-toggle {
+  display: flex;
+  gap: 0;
+}
+
+.view-toggle button {
+  background: white;
+  border: 1px solid #ddd;
+  padding: 0.5rem 1rem;
+}
+
+.view-toggle button:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.view-toggle button:last-child {
+  border-radius: 0 4px 4px 0;
+  border-left: none;
+}
+
+.view-toggle button.active {
+  background: #722f37;
+  color: white;
+  border-color: #722f37;
+}
+
+.favorites .filters {
+  margin-bottom: 0;
+}
+
+.favorites .filters label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.favorites .filters input {
+  width: 60px;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.favorites-table {
+  background: white;
+}
+
+/* Mode selector */
+.mode-selector {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: #f9f9f9;
+  border-radius: 4px;
+}
+
+.mode-selector label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.mode-selector input[type="radio"] {
+  accent-color: #722f37;
+}
+
+/* Button group */
+.button-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Delete button - styled version */
+.delete-button {
+  background: none;
+  border: 1px solid #c00;
+  color: #c00;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.delete-button:hover {
+  background: #c00;
+  color: white;
+}
+
+/* Vintage detail delete button */
+.vintage-header .delete-button {
+  margin-top: 1rem;
+}
+
+/* Expandable wine rows */
+.expandable {
+  cursor: pointer;
+}
+
+.expand-icon {
+  display: inline-block;
+  width: 1rem;
+  margin-right: 0.5rem;
+  font-size: 0.7rem;
+  color: #666;
+}
+
+.vintage-row {
+  background: #f9f9f9;
+}
+
+.vintage-row:hover {
+  background: #f0f0f0;
+}
+
+.vintage-indent {
+  padding-left: 2rem !important;
+  color: #666;
+}
+
+/* Purchase item editing */
+.purchase-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.price-display.clickable {
+  color: #722f37;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+.price-display.clickable:hover {
+  text-decoration-style: solid;
+}
+
+.price-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.price-edit input {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #722f37;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.price-edit button {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  padding: 0.25rem;
+  cursor: pointer;
+}
+
+.price-edit button:first-of-type {
+  color: #28a745;
+}
+
+.price-edit button:last-of-type {
+  color: #c00;
+}
+
+/* Add purchase form */
+.add-purchase-form {
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.add-purchase-form input {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+/* Quick Tasting */
+.quick-tasting {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.quick-tasting-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.quick-tasting-header h2 {
+  margin: 0;
+}
+
+.quick-tasting .close-button {
+  background: #722f37;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.wine-search input {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.1rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.wine-search input:focus {
+  outline: none;
+  border-color: #722f37;
+}
+
+.search-results {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.search-result {
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.search-result:hover {
+  background: #f5f5f5;
+}
+
+.search-result:last-child {
+  border-bottom: none;
+}
+
+.search-result .wine-name {
+  font-weight: 500;
+  flex: 1;
+}
+
+.search-result .vintages {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.no-results {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+}
+
+.tasting-form {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.selected-wine {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.selected-wine strong {
+  font-size: 1.2rem;
+}
+
+.change-wine, .change-vintage {
+  background: none;
+  border: none;
+  color: #722f37;
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-decoration: underline;
+}
+
+.vintage-selector label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.vintage-options {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.vintage-option {
+  padding: 0.75rem 1.5rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.vintage-option:hover {
+  border-color: #722f37;
+}
+
+.vintage-option.selected {
+  background: #722f37;
+  color: white;
+  border-color: #722f37;
+}
+
+.vintage-selected {
+  margin-bottom: 1rem;
+  color: #666;
+}
+
+.vintage-selected strong {
+  color: #333;
+}
+
+.tasting-form .form-row {
+  margin-bottom: 1rem;
+}
+
+.tasting-form .form-row label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.tasting-form .form-row input,
+.tasting-form .form-row textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.tasting-form .form-row input:focus,
+.tasting-form .form-row textarea:focus {
+  outline: none;
+  border-color: #722f37;
+}
+
+.save-tasting {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.1rem;
+  margin-top: 0.5rem;
+}
+
+.success-message {
+  background: #d4edda;
+  color: #155724;
+  padding: 2rem;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 1.1rem;
+}

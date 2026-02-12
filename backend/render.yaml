@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: wine-tracker-api
+    runtime: node
+    buildCommand: npm install && npm run build && npx prisma generate
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: NODE_ENV
+        value: production

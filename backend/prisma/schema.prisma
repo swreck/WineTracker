@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Wine {
+  id                  Int       @id @default(autoincrement())
+  name                String    @unique
+  color               WineColor
+  region              String?
+  appellation         String?
+  grapeVarietyOrBlend String?   @map("grape_variety_or_blend")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  vintages      Vintage[]
+  purchaseItems PurchaseItem[]
+
+  @@map("wines")
+}
+
+enum WineColor {
+  red
+  white
+  rose
+  sparkling
+}
+
+model Vintage {
+  id           Int      @id @default(autoincrement())
+  wineId       Int      @map("wine_id")
+  vintageYear  Int      @map("vintage_year")
+  sellerNotes  String?  @map("seller_notes")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  wine          Wine           @relation(fields: [wineId], references: [id])
+  tastingEvents TastingEvent[]
+  purchaseItems PurchaseItem[]
+
+  @@unique([wineId, vintageYear])
+  @@map("vintages")
+}
+
+model PurchaseBatch {
+  id           Int       @id @default(autoincrement())
+  purchaseDate DateTime  @map("purchase_date")
+  theme        String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  items PurchaseItem[]
+
+  @@map("purchase_batches")
+}
+
+model PurchaseItem {
+  id                Int     @id @default(autoincrement())
+  purchaseBatchId   Int     @map("purchase_batch_id")
+  wineId            Int     @map("wine_id")
+  vintageId         Int     @map("vintage_id")
+  pricePaid         Decimal? @map("price_paid") @db.Decimal(10, 2)
+  quantityPurchased Int     @default(1) @map("quantity_purchased")
+
+  purchaseBatch PurchaseBatch @relation(fields: [purchaseBatchId], references: [id])
+  wine          Wine          @relation(fields: [wineId], references: [id])
+  vintage       Vintage       @relation(fields: [vintageId], references: [id])
+
+  @@map("purchase_items")
+}
+
+model TastingEvent {
+  id          Int      @id @default(autoincrement())
+  vintageId   Int      @map("vintage_id")
+  tastingDate DateTime @map("tasting_date")
+  rating      Decimal  @db.Decimal(3, 1)
+  notes       String?
+
+  vintage Vintage @relation(fields: [vintageId], references: [id])
+
+  @@map("tasting_events")
+}
