@@ -38,7 +38,10 @@
       "WebSearch",
       "WebFetch(domain:neon.com)",
       "Bash(git push:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(for:*)",
+      "Bash(do echo \"Attempt $i:\")",
+      "Bash(done)"
     ]
   }
 }

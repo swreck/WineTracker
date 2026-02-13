@@ -10,10 +10,24 @@ import importRouter from './routes/import';
 import { warmupDatabase, withRetry } from './utils/db';
 
 const app = express();
+
+// Add connection timeout parameters to DATABASE_URL for Neon serverless cold starts
+function getDatabaseUrl(): string {
+  let url = process.env.DATABASE_URL || '';
+
+  // Add timeout parameters if not present
+  if (url && !url.includes('connect_timeout')) {
+    const separator = url.includes('?') ? '&' : '?';
+    url += `${separator}connect_timeout=30&pool_timeout=30`;
+  }
+
+  return url;
+}
+
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: process.env.DATABASE_URL,
+      url: getDatabaseUrl(),
     },
   },
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
