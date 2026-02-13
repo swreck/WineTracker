@@ -31,7 +31,12 @@
       "Bash(jq:*)",
       "Bash(sort:*)",
       "Bash(echo 'wines have prices' curl -s http://localhost:3001/api/wines?limit=200)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: Wine Tracker app\n\nFeatures:\n- Wine inventory with vintages, prices, tastings\n- Import parser for semi-structured notes and receipts\n- Quick tasting entry\n- Search and filter by color\n- Mobile-friendly React frontend\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: Wine Tracker app\n\nFeatures:\n- Wine inventory with vintages, prices, tastings\n- Import parser for semi-structured notes and receipts\n- Quick tasting entry\n- Search and filter by color\n- Mobile-friendly React frontend\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(gh auth:*)",
+      "Bash(git remote add origin https://github.com/swreck/WineTracker.git)",
+      "Bash(git push -u origin main)",
+      "WebSearch",
+      "WebFetch(domain:neon.com)"
     ]
   }
 }

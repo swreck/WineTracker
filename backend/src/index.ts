@@ -29,6 +29,21 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Database connection test
+app.get('/api/db-test', async (req, res) => {
+  try {
+    const result = await prisma.$queryRaw`SELECT 1 as test`;
+    res.json({ status: 'connected', result });
+  } catch (error: any) {
+    res.status(500).json({
+      status: 'failed',
+      error: error.message,
+      code: error.code,
+      meta: error.meta
+    });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
