@@ -51,7 +51,16 @@ app.use('/api/import', importRouter);
 
 // Health check with version to verify deployments
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', version: '2.1', dbTimeout: 30 });
+  const dbUrl = getDatabaseUrl();
+  const hasPoolTimeout = dbUrl.includes('pool_timeout');
+  const hasConnectTimeout = dbUrl.includes('connect_timeout');
+  res.json({
+    status: 'ok',
+    version: '2.2',
+    urlHasPoolTimeout: hasPoolTimeout,
+    urlHasConnectTimeout: hasConnectTimeout,
+    urlEndsWithParams: dbUrl.slice(-50).replace(/:[^@]+@/, ':****@')
+  });
 });
 
 // Database connection test with retry
