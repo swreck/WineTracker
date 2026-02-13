@@ -50,18 +50,9 @@ app.use('/api/tastings', tastingsRouter);
 app.use('/api/purchases', purchasesRouter);
 app.use('/api/import', importRouter);
 
-// Health check with version to verify deployments
+// Health check
 app.get('/api/health', (req, res) => {
-  const dbUrl = getDatabaseUrl();
-  const hasPoolTimeout = dbUrl.includes('pool_timeout');
-  const hasConnectTimeout = dbUrl.includes('connect_timeout');
-  res.json({
-    status: 'ok',
-    version: '2.3',
-    urlHasPoolTimeout: hasPoolTimeout,
-    urlHasConnectTimeout: hasConnectTimeout,
-    urlEndsWithParams: dbUrl.slice(-50).replace(/:[^@]+@/, ':****@')
-  });
+  res.json({ status: 'ok' });
 });
 
 // Database connection test with retry
