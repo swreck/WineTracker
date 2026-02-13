@@ -41,7 +41,9 @@
       "Bash(git commit:*)",
       "Bash(for:*)",
       "Bash(do echo \"Attempt $i:\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(echo:*)",
+      "Bash(do echo \"Test $i:\")"
     ]
   }
 }

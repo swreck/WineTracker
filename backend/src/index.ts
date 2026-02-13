@@ -49,9 +49,9 @@ app.use('/api/tastings', tastingsRouter);
 app.use('/api/purchases', purchasesRouter);
 app.use('/api/import', importRouter);
 
-// Health check
+// Health check with version to verify deployments
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ status: 'ok', version: '2.1', dbTimeout: 30 });
 });
 
 // Database connection test with retry
