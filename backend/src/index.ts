@@ -13,7 +13,8 @@ const app = express();
 
 // Add connection timeout parameters to DATABASE_URL for Neon serverless cold starts
 function getDatabaseUrl(): string {
-  let url = process.env.DATABASE_URL || '';
+  // Clean URL - remove newlines and extra whitespace (fixes copy-paste issues)
+  let url = (process.env.DATABASE_URL || '').replace(/[\r\n\s]+/g, '');
 
   // Add timeout parameters if not present
   if (url && !url.includes('connect_timeout')) {
@@ -56,7 +57,7 @@ app.get('/api/health', (req, res) => {
   const hasConnectTimeout = dbUrl.includes('connect_timeout');
   res.json({
     status: 'ok',
-    version: '2.2',
+    version: '2.3',
     urlHasPoolTimeout: hasPoolTimeout,
     urlHasConnectTimeout: hasConnectTimeout,
     urlEndsWithParams: dbUrl.slice(-50).replace(/:[^@]+@/, ':****@')
