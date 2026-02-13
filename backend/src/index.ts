@@ -7,9 +7,20 @@ import vintagesRouter from './routes/vintages';
 import tastingsRouter from './routes/tastings';
 import purchasesRouter from './routes/purchases';
 import importRouter from './routes/import';
+import { warmupDatabase, withRetry } from './utils/db';
 
 const app = express();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+});
+
+// Pre-warm database connection on startup (handles Neon cold start)
+warmupDatabase(prisma);
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -29,10 +40,14 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Database connection test
+// Database connection test with retry
 app.get('/api/db-test', async (req, res) => {
   try {
-    const result = await prisma.$queryRaw`SELECT 1 as test`;
+    const result = await withRetry(
+      () => prisma.$queryRaw`SELECT 1 as test`,
+      3,
+      3000
+    );
     res.json({ status: 'connected', result });
   } catch (error: any) {
     res.status(500).json({

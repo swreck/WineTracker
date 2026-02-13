@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient, WineColor } from '@prisma/client';
+import { withRetry } from '../utils/db';
 
 const router = Router();
 
@@ -22,7 +23,7 @@ router.get('/', async (req: Request, res: Response) => {
       ];
     }
 
-    const wines = await prisma.wine.findMany({
+    const wines = await withRetry(() => prisma.wine.findMany({
       where,
       include: {
         vintages: {
@@ -33,7 +34,7 @@ router.get('/', async (req: Request, res: Response) => {
         },
       },
       orderBy: { [sortBy as string]: order },
-    });
+    }));
 
     // Calculate average rating for each wine
     const winesWithRatings = wines.map(wine => {
