@@ -4,7 +4,7 @@ import type { Wine, Vintage } from '../api/client';
 
 interface Props {
   onSelectWine: (id: number) => void;
-  onSelectVintage: (id: number) => void;
+  onSelectVintage: (vintageId: number, wineId: number) => void;
 }
 
 type ViewMode = 'wines' | 'vintages';
@@ -160,7 +160,7 @@ export default function Favorites({ onSelectWine, onSelectVintage }: Props) {
               </thead>
               <tbody>
                 {vintages.map((vintage, i) => (
-                  <tr key={vintage.id} onClick={() => onSelectVintage(vintage.id)}>
+                  <tr key={vintage.id} onClick={() => vintage.wine && onSelectVintage(vintage.id, vintage.wine.id)}>
                     <td className="rank">{i + 1}</td>
                     <td>{vintage.wine?.name}</td>
                     <td>{vintage.vintageYear}</td>

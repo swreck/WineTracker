@@ -4,7 +4,7 @@ import type { Wine } from '../api/client';
 
 interface Props {
   onSelectWine: (id: number) => void;
-  onSelectVintage: (id: number) => void;
+  onSelectVintage: (vintageId: number, wineId: number) => void;
 }
 
 const colorLabels: Record<string, string> = {
@@ -345,7 +345,7 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
                       <tr
                         key={`vintage-${vintage.id}`}
                         className="vintage-row"
-                        onClick={() => onSelectVintage(vintage.id)}
+                        onClick={() => onSelectVintage(vintage.id, wine.id)}
                       >
                         <td className="vintage-indent">↳ {vintage.vintageYear}</td>
                         <td></td>

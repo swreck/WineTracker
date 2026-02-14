@@ -56,7 +56,7 @@ function App() {
         {page.type === 'wines' && (
           <WinesList
             onSelectWine={(id) => navigate({ type: 'wine', id })}
-            onSelectVintage={(id) => navigate({ type: 'vintage', id })}
+            onSelectVintage={(vintageId, wineId) => navigate({ type: 'vintage', id: vintageId, fromWineId: wineId })}
           />
         )}
         {page.type === 'wine' && (
@@ -82,7 +82,7 @@ function App() {
         {page.type === 'favorites' && (
           <Favorites
             onSelectWine={(id) => navigate({ type: 'wine', id })}
-            onSelectVintage={(id) => navigate({ type: 'vintage', id })}
+            onSelectVintage={(vintageId, wineId) => navigate({ type: 'vintage', id: vintageId, fromWineId: wineId })}
           />
         )}
         {page.type === 'quick-tasting' && (
