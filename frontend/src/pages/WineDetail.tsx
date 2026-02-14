@@ -26,9 +26,27 @@ export default function WineDetail({ wineId, onBack, onSelectVintage }: Props) {
   const [addingTastingForVintage, setAddingTastingForVintage] = useState<number | null>(null);
   const [newTasting, setNewTasting] = useState({
     tastingDate: new Date().toISOString().split('T')[0],
-    rating: '',
+    rating: null as number | null,
+    ratingLabel: '',
     notes: '',
   });
+  const [showRatingPicker, setShowRatingPicker] = useState(false);
+
+  // Rating options: <5, 5, 5.5, 6, ... 10
+  const ratingOptions = [
+    { value: 4, label: '<5' },
+    { value: 5, label: '5' },
+    { value: 5.5, label: '5.5' },
+    { value: 6, label: '6' },
+    { value: 6.5, label: '6.5' },
+    { value: 7, label: '7' },
+    { value: 7.5, label: '7.5' },
+    { value: 8, label: '8' },
+    { value: 8.5, label: '8.5' },
+    { value: 9, label: '9' },
+    { value: 9.5, label: '9.5' },
+    { value: 10, label: '10' },
+  ];
 
   useEffect(() => {
     loadWine();
@@ -74,19 +92,26 @@ export default function WineDetail({ wineId, onBack, onSelectVintage }: Props) {
     setAddingTastingForVintage(vintageId);
     setNewTasting({
       tastingDate: new Date().toISOString().split('T')[0],
-      rating: '',
+      rating: null,
+      ratingLabel: '',
       notes: '',
     });
+    setShowRatingPicker(false);
   }
 
   function setToday() {
     setNewTasting({ ...newTasting, tastingDate: new Date().toISOString().split('T')[0] });
   }
 
+  function selectRating(value: number, label: string) {
+    setNewTasting({ ...newTasting, rating: value, ratingLabel: label });
+    setShowRatingPicker(false);
+  }
+
   async function handleAddTasting() {
     if (!addingTastingForVintage) return;
-    if (!newTasting.rating) {
-      setError('Rating is required');
+    if (newTasting.rating === null) {
+      setError('Please select a rating');
       return;
     }
 
@@ -94,16 +119,18 @@ export default function WineDetail({ wineId, onBack, onSelectVintage }: Props) {
       await api.createTasting({
         vintageId: addingTastingForVintage,
         tastingDate: newTasting.tastingDate,
-        rating: parseFloat(newTasting.rating),
+        rating: newTasting.rating,
         notes: newTasting.notes || undefined,
       });
       await loadWine();
       setAddingTastingForVintage(null);
       setNewTasting({
         tastingDate: new Date().toISOString().split('T')[0],
-        rating: '',
+        rating: null,
+        ratingLabel: '',
         notes: '',
       });
+      setShowRatingPicker(false);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to add tasting');
@@ -223,15 +250,12 @@ export default function WineDetail({ wineId, onBack, onSelectVintage }: Props) {
                       />
                       <button className="today-btn" onClick={setToday}>Today</button>
                     </div>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="1"
-                      max="10"
-                      placeholder="Rating (1-10)"
-                      value={newTasting.rating}
-                      onChange={(e) => setNewTasting({ ...newTasting, rating: e.target.value })}
-                    />
+                    <button
+                      className={`inline-rating-btn ${newTasting.rating !== null ? 'has-rating' : ''}`}
+                      onClick={() => setShowRatingPicker(true)}
+                    >
+                      {newTasting.rating !== null ? newTasting.ratingLabel : 'Tap to rate'}
+                    </button>
                     <textarea
                       placeholder="Notes (optional)"
                       value={newTasting.notes}
@@ -241,6 +265,25 @@ export default function WineDetail({ wineId, onBack, onSelectVintage }: Props) {
                     <div className="form-actions">
                       <button onClick={handleAddTasting}>Save</button>
                       <button onClick={() => setAddingTastingForVintage(null)}>Cancel</button>
+                    </div>
+                  </div>
+                )}
+
+                {showRatingPicker && addingTastingForVintage === vintage.id && (
+                  <div className="rating-popup-overlay" onClick={() => setShowRatingPicker(false)}>
+                    <div className="rating-popup" onClick={(e) => e.stopPropagation()}>
+                      <div className="rating-popup-header">Rate this wine</div>
+                      <div className="rating-options-grid">
+                        {ratingOptions.map((opt) => (
+                          <button
+                            key={opt.value}
+                            className={`rating-option ${newTasting.rating === opt.value ? 'selected' : ''} ${opt.value >= 8 ? 'high' : opt.value >= 5 ? 'mid' : 'low'}`}
+                            onClick={() => selectRating(opt.value, opt.label)}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}

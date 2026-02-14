@@ -1846,3 +1846,28 @@ th.sortable.active {
   background: white;
   border: 1px solid #ccc;
 }
+
+/* Inline rating button */
+.inline-rating-btn {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 1rem;
+  text-align: center;
+  color: #888;
+}
+
+.inline-rating-btn:hover {
+  border-color: #722f37;
+}
+
+.inline-rating-btn.has-rating {
+  border-style: solid;
+  border-color: #722f37;
+  color: #722f37;
+  font-weight: 600;
+  font-size: 1.2rem;
+}
