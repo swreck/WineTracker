@@ -30,6 +30,10 @@ export default function Import({ onComplete }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Match decisions: { importedName: existingWineId | null }
+  // null means "create new wine", number means "use this existing wine"
+  const [matchDecisions, setMatchDecisions] = useState<Record<string, number | null>>({});
+
   // Manual entry state
   const [manualEntry, setManualEntry] = useState<ManualEntry>({
     name: '',
@@ -54,6 +58,7 @@ export default function Import({ onComplete }: Props) {
       const apiMode = mode === 'label' ? 'label' : mode === 'receipt' ? 'receipt' : 'standard';
       const data = await api.previewImport(text, apiMode);
       setPreview(data);
+      setMatchDecisions({}); // Reset match decisions on re-preview
       setStage('preview');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to parse import');
@@ -67,7 +72,7 @@ export default function Import({ onComplete }: Props) {
       setLoading(true);
       setError(null);
       const apiMode = mode === 'label' ? 'label' : mode === 'receipt' ? 'receipt' : 'standard';
-      const data = await api.executeImport(text, apiMode);
+      const data = await api.executeImport(text, apiMode, matchDecisions);
       setResult(data);
       setStage('complete');
     } catch (e) {
@@ -202,6 +207,58 @@ export default function Import({ onComplete }: Props) {
           </button>
         </div>
 
+        {preview.potentialMatches && preview.potentialMatches.length > 0 && (
+          <div className="potential-matches">
+            <h4>Possible Duplicates ({preview.potentialMatches.length})</h4>
+            <p className="match-note">
+              These imported wines look similar to existing wines. Please confirm:
+            </p>
+            {preview.potentialMatches.map((pm, i) => (
+              <div key={i} className="potential-match-item">
+                <div className="match-imported">
+                  <strong>Importing:</strong> "{pm.importedName}"
+                </div>
+                <div className="match-options">
+                  {pm.matches.map((m) => (
+                    <label key={m.existingId} className="match-option">
+                      <input
+                        type="radio"
+                        name={`match-${pm.importedName}`}
+                        checked={matchDecisions[pm.importedName] === m.existingId}
+                        onChange={() => setMatchDecisions({
+                          ...matchDecisions,
+                          [pm.importedName]: m.existingId
+                        })}
+                      />
+                      <span className="match-existing">
+                        Use existing: "{m.existingName}"
+                        <span className="match-similarity">
+                          ({Math.round(m.similarity * 100)}% similar)
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                  <label className="match-option">
+                    <input
+                      type="radio"
+                      name={`match-${pm.importedName}`}
+                      checked={matchDecisions[pm.importedName] === null}
+                      onChange={() => setMatchDecisions({
+                        ...matchDecisions,
+                        [pm.importedName]: null
+                      })}
+                    />
+                    <span className="match-new">Create as new wine</span>
+                  </label>
+                </div>
+                {matchDecisions[pm.importedName] === undefined && (
+                  <div className="match-warning">Please select an option</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         {preview.existingMatches && preview.existingMatches.length > 0 && (
           <div className="existing-matches">
             <h4>Already in Database ({preview.existingMatches.length})</h4>
@@ -287,13 +344,24 @@ export default function Import({ onComplete }: Props) {
 
         <div className="preview-actions">
           <button onClick={() => setStage('input')}>Back</button>
-          <button
-            className="primary-button"
-            onClick={handleExecute}
-            disabled={loading}
-          >
-            {loading ? 'Importing...' : 'Confirm Import'}
-          </button>
+          {(() => {
+            const unresolvedMatches = (preview.potentialMatches || []).filter(
+              pm => matchDecisions[pm.importedName] === undefined
+            );
+            const hasUnresolved = unresolvedMatches.length > 0;
+            return (
+              <button
+                className="primary-button"
+                onClick={handleExecute}
+                disabled={loading || hasUnresolved}
+                title={hasUnresolved ? 'Please resolve all potential duplicates above' : ''}
+              >
+                {loading ? 'Importing...' : hasUnresolved
+                  ? `Resolve ${unresolvedMatches.length} match${unresolvedMatches.length > 1 ? 'es' : ''} first`
+                  : 'Confirm Import'}
+              </button>
+            );
+          })()}
         </div>
       </div>
     );

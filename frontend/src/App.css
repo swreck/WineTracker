@@ -1871,3 +1871,90 @@ th.sortable.active {
   font-weight: 600;
   font-size: 1.2rem;
 }
+
+/* Potential matches UI */
+.potential-matches {
+  background: #fff8e6;
+  border: 1px solid #f0c36d;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.potential-matches h4 {
+  color: #8a6d3b;
+  margin: 0 0 0.5rem 0;
+}
+
+.potential-matches .match-note {
+  color: #8a6d3b;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.potential-match-item {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.potential-match-item:last-child {
+  margin-bottom: 0;
+}
+
+.match-imported {
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.match-imported strong {
+  color: #666;
+  font-weight: normal;
+}
+
+.match-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.match-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.match-option:hover {
+  background: #f5f5f5;
+}
+
+.match-option input[type="radio"] {
+  margin-top: 2px;
+}
+
+.match-existing {
+  color: #333;
+}
+
+.match-similarity {
+  color: #888;
+  font-size: 0.85rem;
+  margin-left: 0.5rem;
+}
+
+.match-new {
+  color: #722f37;
+  font-weight: 500;
+}
+
+.match-warning {
+  color: #c00;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  padding-left: 1.5rem;
+}

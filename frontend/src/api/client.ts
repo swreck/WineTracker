@@ -76,6 +76,14 @@ export interface PurchaseItem {
   purchaseBatch?: PurchaseBatch;
 }
 
+export interface PotentialMatch {
+  existingId: number;
+  existingName: string;
+  importedName: string;
+  similarity: number;
+  matchType: 'exact_normalized' | 'high_similarity' | 'contains';
+}
+
 export interface ImportPreview {
   batches: any[];
   ambiguities: {
@@ -83,6 +91,12 @@ export interface ImportPreview {
     message: string;
     context: string;
     suggestion?: string;
+  }[];
+  potentialMatches?: {
+    batchIndex: number;
+    itemIndex: number;
+    importedName: string;
+    matches: PotentialMatch[];
   }[];
   existingMatches?: {
     name: string;
@@ -96,6 +110,7 @@ export interface ImportPreview {
     ambiguityCount: number;
     existingCount?: number;
     newCount?: number;
+    potentialMatchCount?: number;
   };
 }
 
@@ -171,8 +186,8 @@ export const api = {
   // Import
   previewImport: (text: string, mode?: 'standard' | 'receipt' | 'label') =>
     request<ImportPreview>('/import/preview', { method: 'POST', body: JSON.stringify({ text, mode }) }),
-  executeImport: (text: string, mode?: 'standard' | 'receipt' | 'label') =>
-    request<ImportResult>('/import/execute', { method: 'POST', body: JSON.stringify({ text, mode }) }),
+  executeImport: (text: string, mode?: 'standard' | 'receipt' | 'label', matchDecisions?: Record<string, number | null>) =>
+    request<ImportResult>('/import/execute', { method: 'POST', body: JSON.stringify({ text, mode, matchDecisions }) }),
 
   // Manual wine entry
   createWineWithVintage: (data: {
