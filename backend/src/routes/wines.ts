@@ -117,6 +117,68 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
+// Create wine with vintage and optional purchase (manual entry)
+router.post('/create-with-vintage', async (req: Request, res: Response) => {
+  const prisma: PrismaClient = req.app.locals.prisma;
+  const { name, color, vintageYear, price, quantity = 1, purchaseDate } = req.body;
+
+  try {
+    let wineCreated = false;
+    let vintageCreated = false;
+
+    // Find or create wine
+    let wine = await prisma.wine.findFirst({
+      where: { name: { equals: name, mode: 'insensitive' } },
+    });
+
+    if (!wine) {
+      wine = await prisma.wine.create({
+        data: { name, color },
+      });
+      wineCreated = true;
+    }
+
+    // Find or create vintage
+    let vintage = await prisma.vintage.findFirst({
+      where: { wineId: wine.id, vintageYear },
+    });
+
+    if (!vintage) {
+      vintage = await prisma.vintage.create({
+        data: { wineId: wine.id, vintageYear },
+      });
+      vintageCreated = true;
+    }
+
+    // Create purchase batch and item
+    const purchaseBatch = await prisma.purchaseBatch.create({
+      data: {
+        purchaseDate: purchaseDate ? new Date(purchaseDate) : new Date(),
+      },
+    });
+
+    await prisma.purchaseItem.create({
+      data: {
+        purchaseBatchId: purchaseBatch.id,
+        wineId: wine.id,
+        vintageId: vintage.id,
+        pricePaid: price,
+        quantityPurchased: quantity,
+      },
+    });
+
+    res.status(201).json({
+      wineCreated,
+      vintageCreated,
+      wine,
+      vintage,
+    });
+  } catch (error) {
+    console.error('Error creating wine with vintage:', error);
+    res.status(500).json({ error: 'Failed to create wine' });
+  }
+});
+
 // Update wine
 router.put('/:id', async (req: Request, res: Response) => {
   const prisma: PrismaClient = req.app.locals.prisma;

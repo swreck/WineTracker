@@ -712,3 +712,151 @@ export function parseReceiptText(text: string): ImportResult {
   // Use the same parser - it handles receipt format via line classification
   return parseText(text);
 }
+
+// Label parser - flexible parsing for wine bottle label OCR
+// This handles highly varied OCR output from photos of wine labels
+export function parseLabelText(text: string): ImportResult {
+  const ambiguities: Ambiguity[] = [];
+
+  // Normalize the text
+  const normalized = text
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .trim();
+
+  // Try to extract vintage year from anywhere in the text
+  let vintageYear = parseVintageYear(normalized);
+
+  // If no 4-digit year found, look for standalone 2-digit years
+  if (!vintageYear) {
+    const twoDigitMatch = normalized.match(/\b(\d{2})\b/g);
+    if (twoDigitMatch) {
+      for (const match of twoDigitMatch) {
+        const num = parseInt(match);
+        if (num >= 10 && num <= 30) {
+          vintageYear = 2000 + num;
+          break;
+        }
+        if (num >= 80 && num <= 99) {
+          vintageYear = 1900 + num;
+          break;
+        }
+      }
+    }
+  }
+
+  // Default to recent year if nothing found
+  if (!vintageYear) {
+    vintageYear = new Date().getFullYear() - 2;
+    ambiguities.push({
+      type: 'vintage_parse',
+      message: 'Could not find vintage year, defaulting to recent',
+      context: normalized.slice(0, 100),
+      suggestion: `Using ${vintageYear}`
+    });
+  }
+
+  // Detect color from the full text
+  const color = detectColor(normalized);
+
+  // Extract wine name - this is the tricky part
+  // Strategy: Clean up the text and use the most significant lines
+  const lines = normalized.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+  // Remove lines that are clearly not wine names
+  const significantLines = lines.filter(line => {
+    const lower = line.toLowerCase();
+    // Skip short lines (likely artifacts)
+    if (line.length < 3) return false;
+    // Skip pure numbers
+    if (/^\d+$/.test(line)) return false;
+    // Skip alcohol content
+    if (/\d+(\.\d+)?%?\s*(alc|vol|alcohol)/i.test(line)) return false;
+    if (/\balc\.?\s*\d/i.test(line)) return false;
+    // Skip volume/size
+    if (/\d+\s*ml/i.test(line)) return false;
+    if (/750\s*ml/i.test(line)) return false;
+    // Skip "contains sulfites" type warnings
+    if (/contains?\s*sulfites/i.test(line)) return false;
+    if (/government\s*warning/i.test(line)) return false;
+    // Skip barcode numbers
+    if (/^\d{8,}$/.test(line.replace(/\s/g, ''))) return false;
+    // Skip "Product of" lines
+    if (/^product\s+of/i.test(line)) return false;
+    // Skip "Estate bottled" etc
+    if (/^(estate\s+bottled|bottled\s+by|produced?\s+(by|and)|imported\s+by)/i.test(line)) return false;
+    // Skip vintage year alone
+    if (/^(19|20)\d{2}$/.test(line)) return false;
+    return true;
+  });
+
+  // Build wine name from significant lines
+  let wineName = '';
+
+  if (significantLines.length === 0) {
+    // Fallback: use first substantial part of original text
+    wineName = normalized.split('\n')[0]?.trim() || 'Unknown Wine';
+  } else if (significantLines.length === 1) {
+    wineName = significantLines[0];
+  } else {
+    // Multiple lines - combine intelligently
+    // Look for winery name (often first or has specific patterns)
+    // Look for wine name/varietal
+    // Look for region/appellation
+
+    // First, check for common patterns
+    const hasWinery = significantLines.some(l => /château|chateau|domaine|bodega|cave|cantina|weingut|tenuta|fattoria|podere|vignoble|vigneron|cellars?|winery|vineyards?|estate/i.test(l));
+
+    if (hasWinery) {
+      // Use winery line plus the next most significant line
+      const wineryLine = significantLines.find(l => /château|chateau|domaine|bodega|cave|cantina|weingut|tenuta|fattoria|podere|vignoble|vigneron|cellars?|winery|vineyards?|estate/i.test(l));
+      const otherLines = significantLines.filter(l => l !== wineryLine);
+
+      // Find the most wine-like other line (varietal, region, or cuvée)
+      const wineTypeLine = otherLines.find(l =>
+        /cabernet|merlot|pinot|syrah|shiraz|chardonnay|sauvignon|riesling|malbec|zinfandel|sangiovese|nebbiolo|tempranillo|grenache|viognier|reserve|gran?\s*reserva|cuvée|cuvee|grand\s*cru|premier\s*cru|selection|single\s*vineyard/i.test(l)
+      ) || otherLines[0];
+
+      if (wineryLine && wineTypeLine) {
+        wineName = `${wineryLine} ${wineTypeLine}`;
+      } else {
+        wineName = wineryLine || significantLines.slice(0, 2).join(' ');
+      }
+    } else {
+      // No clear winery - combine first few lines
+      wineName = significantLines.slice(0, 3).join(' ');
+    }
+  }
+
+  // Clean up the wine name
+  wineName = wineName
+    .replace(/\b(19|20)\d{2}\b/g, '') // Remove years
+    .replace(/\d+(\.\d+)?%/g, '')      // Remove percentages
+    .replace(/\s+/g, ' ')              // Normalize whitespace
+    .trim();
+
+  // Remove trailing/leading punctuation
+  wineName = wineName.replace(/^[,.\s-]+|[,.\s-]+$/g, '').trim();
+
+  // If name is too short, it's probably wrong
+  if (wineName.length < 3) {
+    wineName = significantLines.join(' ').slice(0, 100);
+  }
+
+  // Create a single batch with one item
+  const batch: ParsedBatch = {
+    purchaseDate: new Date(),
+    items: [{
+      name: wineName,
+      color,
+      vintageYear,
+      quantity: 1,
+      tastings: []
+    }]
+  };
+
+  return {
+    batches: [batch],
+    ambiguities
+  };
+}

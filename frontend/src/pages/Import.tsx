@@ -8,16 +8,38 @@ interface Props {
 
 type Stage = 'input' | 'preview' | 'complete';
 
-type ImportMode = 'standard' | 'receipt';
+type ImportMode = 'receipt' | 'label' | 'manual' | 'standard';
+
+interface ManualEntry {
+  name: string;
+  vintageYear: number;
+  color: 'red' | 'white' | 'rose' | 'sparkling';
+  price: string;
+  quantity: number;
+  purchaseDate: string;
+}
+
+const currentYear = new Date().getFullYear();
 
 export default function Import({ onComplete }: Props) {
   const [stage, setStage] = useState<Stage>('input');
   const [text, setText] = useState('');
-  const [mode, setMode] = useState<ImportMode>('standard');
+  const [mode, setMode] = useState<ImportMode>('receipt');
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Manual entry state
+  const [manualEntry, setManualEntry] = useState<ManualEntry>({
+    name: '',
+    vintageYear: currentYear - 2,
+    color: 'red',
+    price: '',
+    quantity: 1,
+    purchaseDate: new Date().toISOString().split('T')[0],
+  });
+  const [showOlderYears, setShowOlderYears] = useState(false);
 
   async function handlePreview() {
     if (!text.trim()) {
@@ -28,7 +50,9 @@ export default function Import({ onComplete }: Props) {
     try {
       setLoading(true);
       setError(null);
-      const data = await api.previewImport(text, mode);
+      // For label mode, use 'label' to trigger flexible single-bottle parsing
+      const apiMode = mode === 'label' ? 'label' : mode === 'receipt' ? 'receipt' : 'standard';
+      const data = await api.previewImport(text, apiMode);
       setPreview(data);
       setStage('preview');
     } catch (e) {
@@ -42,11 +66,53 @@ export default function Import({ onComplete }: Props) {
     try {
       setLoading(true);
       setError(null);
-      const data = await api.executeImport(text, mode);
+      const apiMode = mode === 'label' ? 'label' : mode === 'receipt' ? 'receipt' : 'standard';
+      const data = await api.executeImport(text, apiMode);
       setResult(data);
       setStage('complete');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to execute import');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleManualSubmit() {
+    if (!manualEntry.name.trim()) {
+      setError('Wine name is required');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Create the wine directly via API
+      const data = await api.createWineWithVintage({
+        name: manualEntry.name.trim(),
+        color: manualEntry.color,
+        vintageYear: manualEntry.vintageYear,
+        price: manualEntry.price ? parseFloat(manualEntry.price) : undefined,
+        quantity: manualEntry.quantity,
+        purchaseDate: manualEntry.purchaseDate,
+      });
+
+      setResult({
+        success: true,
+        results: {
+          winesCreated: data.wineCreated ? 1 : 0,
+          winesMatched: data.wineCreated ? 0 : 1,
+          vintagesCreated: data.vintageCreated ? 1 : 0,
+          vintagesMatched: data.vintageCreated ? 0 : 1,
+          purchaseBatchesCreated: 1,
+          purchaseItemsCreated: 1,
+          tastingsCreated: 0,
+        },
+        ambiguities: [],
+      });
+      setStage('complete');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to add wine');
     } finally {
       setLoading(false);
     }
@@ -85,9 +151,25 @@ export default function Import({ onComplete }: Props) {
           </div>
         )}
 
-        <button className="primary-button" onClick={onComplete}>
-          View Wines
-        </button>
+        <div className="complete-actions">
+          <button className="primary-button" onClick={onComplete}>
+            View Wines
+          </button>
+          <button onClick={() => {
+            setStage('input');
+            setText('');
+            setManualEntry({
+              name: '',
+              vintageYear: currentYear - 2,
+              color: 'red',
+              price: '',
+              quantity: 1,
+              purchaseDate: new Date().toISOString().split('T')[0],
+            });
+          }}>
+            Add More
+          </button>
+        </div>
       </div>
     );
   }
@@ -104,6 +186,20 @@ export default function Import({ onComplete }: Props) {
             <li>Wine items: {preview.summary.itemCount} ({preview.summary.newCount || preview.summary.itemCount} new, {preview.summary.existingCount || 0} already in database)</li>
             <li>Tasting notes: {preview.summary.tastingCount}</li>
           </ul>
+        </div>
+
+        {/* Editable text area */}
+        <div className="edit-import-text">
+          <h4>Edit Import Text</h4>
+          <p className="edit-hint">You can edit the text below and re-preview.</p>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={8}
+          />
+          <button onClick={handlePreview} disabled={loading}>
+            {loading ? 'Re-parsing...' : 'Re-Preview'}
+          </button>
         </div>
 
         {preview.existingMatches && preview.existingMatches.length > 0 && (
@@ -139,8 +235,8 @@ export default function Import({ onComplete }: Props) {
         )}
 
         <div className="preview-batches">
-          <h4>Parsed Data (showing first 10 batches)</h4>
-          {preview.batches.slice(0, 10).map((batch, bi) => (
+          <h4>Parsed Data</h4>
+          {preview.batches.slice(0, 15).map((batch, bi) => (
             <div key={bi} className="batch-preview">
               <div className="batch-header">
                 <strong>
@@ -150,7 +246,7 @@ export default function Import({ onComplete }: Props) {
                 <span className="item-count"> ({batch.items?.length || 0} wines)</span>
               </div>
               <div className="batch-items">
-                {(batch.items || []).slice(0, 20).map((item: any, ii: number) => (
+                {(batch.items || []).map((item: any, ii: number) => (
                   <div key={ii} className="preview-item">
                     <div className="preview-item-header">
                       <strong>{item.name}</strong>{' '}
@@ -179,21 +275,18 @@ export default function Import({ onComplete }: Props) {
                     )}
                   </div>
                 ))}
-                {(batch.items?.length || 0) > 20 && (
-                  <div className="more-items">...and {batch.items.length - 20} more</div>
-                )}
               </div>
             </div>
           ))}
-          {preview.batches.length > 10 && (
-            <p className="more-batches">...and {preview.batches.length - 10} more batches</p>
+          {preview.batches.length > 15 && (
+            <p className="more-batches">...and {preview.batches.length - 15} more batches</p>
           )}
         </div>
 
         {error && <div className="error">{error}</div>}
 
         <div className="preview-actions">
-          <button onClick={() => setStage('input')}>← Back to Edit</button>
+          <button onClick={() => setStage('input')}>Back</button>
           <button
             className="primary-button"
             onClick={handleExecute}
@@ -206,52 +299,176 @@ export default function Import({ onComplete }: Props) {
     );
   }
 
+  // Mode tabs component
+  const ModeTabs = () => (
+    <div className="mode-tabs">
+      <button className={mode === 'receipt' ? 'active' : ''} onClick={() => setMode('receipt')}>Receipt</button>
+      <button className={mode === 'label' ? 'active' : ''} onClick={() => setMode('label')}>Label</button>
+      <button className={mode === 'manual' ? 'active' : ''} onClick={() => setMode('manual')}>Manual</button>
+      <button className={mode === 'standard' ? 'active' : ''} onClick={() => setMode('standard')}>Import</button>
+    </div>
+  );
+
+  // Manual entry form
+  if (mode === 'manual') {
+    const years = [];
+    for (let y = currentYear; y >= currentYear - 10; y--) {
+      years.push(y);
+    }
+
+    return (
+      <div className="import-input manual-entry">
+        <h2>Add Wine Manually</h2>
+
+        <ModeTabs />
+
+        <p>Enter wine details directly. Tasting notes can be added later.</p>
+
+        <div className="manual-form">
+          <div className="form-field">
+            <label>Wine Name *</label>
+            <input
+              type="text"
+              value={manualEntry.name}
+              onChange={(e) => setManualEntry({ ...manualEntry, name: e.target.value })}
+              placeholder="e.g., Chateau Margaux - Margaux"
+            />
+          </div>
+
+          <div className="form-field">
+            <label>Vintage Year</label>
+            <div className="vintage-picker">
+              {years.map((y) => (
+                <button
+                  key={y}
+                  type="button"
+                  className={manualEntry.vintageYear === y ? 'selected' : ''}
+                  onClick={() => setManualEntry({ ...manualEntry, vintageYear: y })}
+                >
+                  {y}
+                </button>
+              ))}
+              <button
+                type="button"
+                className={showOlderYears ? 'selected' : ''}
+                onClick={() => setShowOlderYears(!showOlderYears)}
+              >
+                Older...
+              </button>
+            </div>
+            {showOlderYears && (
+              <input
+                type="number"
+                value={manualEntry.vintageYear < currentYear - 10 ? manualEntry.vintageYear : ''}
+                onChange={(e) => setManualEntry({ ...manualEntry, vintageYear: parseInt(e.target.value) || currentYear - 2 })}
+                placeholder="Enter year (e.g., 1998)"
+                min={1900}
+                max={currentYear}
+                className="older-year-input"
+              />
+            )}
+          </div>
+
+          <div className="form-field">
+            <label>Color</label>
+            <div className="color-picker">
+              {(['red', 'white', 'rose', 'sparkling'] as const).map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  className={`color-option ${c} ${manualEntry.color === c ? 'selected' : ''}`}
+                  onClick={() => setManualEntry({ ...manualEntry, color: c })}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="form-row-inline">
+            <div className="form-field">
+              <label>Price</label>
+              <input
+                type="number"
+                step="0.01"
+                value={manualEntry.price}
+                onChange={(e) => setManualEntry({ ...manualEntry, price: e.target.value })}
+                placeholder="$"
+              />
+            </div>
+            <div className="form-field">
+              <label>Qty</label>
+              <input
+                type="number"
+                min={1}
+                value={manualEntry.quantity}
+                onChange={(e) => setManualEntry({ ...manualEntry, quantity: parseInt(e.target.value) || 1 })}
+              />
+            </div>
+          </div>
+
+          <div className="form-field">
+            <label>Purchase Date</label>
+            <input
+              type="date"
+              value={manualEntry.purchaseDate}
+              onChange={(e) => setManualEntry({ ...manualEntry, purchaseDate: e.target.value })}
+            />
+          </div>
+        </div>
+
+        {error && <div className="error">{error}</div>}
+
+        <button
+          className="primary-button"
+          onClick={handleManualSubmit}
+          disabled={loading || !manualEntry.name.trim()}
+        >
+          {loading ? 'Adding...' : 'Add Wine'}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="import-input">
-      <h2>Import Wines</h2>
+      <h2>Add Wines</h2>
 
-      <div className="mode-selector">
-        <label>
-          <input
-            type="radio"
-            name="mode"
-            value="standard"
-            checked={mode === 'standard'}
-            onChange={() => setMode('standard')}
-          />
-          Standard (notes & purchases)
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="mode"
-            value="receipt"
-            checked={mode === 'receipt'}
-            onChange={() => setMode('receipt')}
-          />
-          Receipt (OCR from store receipt)
-        </label>
-      </div>
+      <ModeTabs />
 
-      {mode === 'standard' ? (
+      {mode === 'receipt' && (
         <>
-          <p>Paste your wine purchase notes below. The parser will extract:</p>
-          <ul className="format-hints">
-            <li>Purchase dates (as date headers)</li>
-            <li>Wine lines: Name, Vintage, Price, Quantity</li>
-            <li>Seller notes (ALL CAPS descriptions)</li>
-            <li>Your tasting notes with dates and ratings</li>
-          </ul>
-        </>
-      ) : (
-        <>
-          <p>Paste OCR text from a wine store receipt. The parser will extract:</p>
+          <p>Paste OCR text from a wine store receipt.</p>
           <ul className="format-hints">
             <li>Wine names (removes store SKU numbers)</li>
             <li>Vintage years (2 or 4 digit)</li>
-            <li>Quantity and unit price (from "2 @ 39.99" format)</li>
-            <li>Seller descriptions (ALL CAPS text)</li>
-            <li>Ignores: tax, discounts, REGULAR prices, totals</li>
+            <li>Quantity and price (from "2 @ 39.99" format)</li>
+            <li>Seller descriptions</li>
+            <li>Ignores: tax, discounts, totals</li>
+          </ul>
+        </>
+      )}
+
+      {mode === 'label' && (
+        <>
+          <p>Paste OCR text from a wine bottle label photo.</p>
+          <ul className="format-hints">
+            <li>Wine name (winery, region, varietal)</li>
+            <li>Vintage year</li>
+            <li>Flexible parsing for varied OCR formats</li>
+          </ul>
+          <p className="hint">Tip: Take a photo with your camera app, use built-in text recognition, then paste here.</p>
+        </>
+      )}
+
+      {mode === 'standard' && (
+        <>
+          <p>Paste your wine purchase notes with tasting history.</p>
+          <ul className="format-hints">
+            <li>Purchase dates (as date headers)</li>
+            <li>Wine lines: Name, Vintage, Price, Quantity</li>
+            <li>Seller notes</li>
+            <li>Your tasting notes with dates and ratings</li>
           </ul>
         </>
       )}
@@ -259,27 +476,33 @@ export default function Import({ onComplete }: Props) {
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder={mode === 'standard' ? `Example format:
+        placeholder={
+          mode === 'receipt'
+            ? `Paste receipt OCR here...
 
-January 15, 2024 - Winter Reds
-
-Chateau Margaux - Margaux 2018 $150
-Elegant, complex nose with blackcurrant and cedar.
-Tasted 2/1/2024: 9.0 - Incredible depth and length.
-
-Ridge - Monte Bello 2019 $180 x2
-California's answer to Bordeaux.` : `Example receipt OCR:
-
+Example:
 14248 PINTAS CHARACTER 2019
 2 @ 39.99        S        79.98 T
-REGULAR    50.00
-FROM 30 YEAR OLD VINES, THIS IS A TOP
-DOURO VALLEY FIELD BLEND RED.
+FROM 30 YEAR OLD VINES, A TOP DOURO VALLEY BLEND.`
+            : mode === 'label'
+            ? `Paste label OCR here...
 
-15075 POEIRINHO BAIRRADA BAGA 16
-1 @ 49.99        5.00        44.99 T
-FAMOUS WINEMAKER DIRK NIEPOORT.`}
-        rows={15}
+Example:
+CHATEAU MARGAUX
+Grand Vin
+2018
+MARGAUX
+Premier Grand Cru Classé`
+            : `Paste purchase notes here...
+
+Example:
+January 15, 2024 - Winter Reds
+
+Chateau Margaux 2018 $150
+Elegant, complex nose with blackcurrant.
+Tasted 2/1/2024: 9.0 - Incredible depth.`
+        }
+        rows={12}
       />
 
       {error && <div className="error">{error}</div>}

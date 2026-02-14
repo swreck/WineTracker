@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { parseText, parseReceiptText } from '../parser/parser';
+import { parseText, parseReceiptText, parseLabelText } from '../parser/parser';
 
 const router = Router();
 
@@ -13,8 +13,15 @@ router.post('/preview', async (req: Request, res: Response) => {
   }
 
   try {
-    // Use receipt parser if mode is 'receipt', otherwise use standard parser
-    const result = mode === 'receipt' ? parseReceiptText(text) : parseText(text);
+    // Use appropriate parser based on mode
+    let result;
+    if (mode === 'receipt') {
+      result = parseReceiptText(text);
+    } else if (mode === 'label') {
+      result = parseLabelText(text);
+    } else {
+      result = parseText(text);
+    }
 
     const itemCount = result.batches.reduce((sum, b) => sum + b.items.length, 0);
     const tastingCount = result.batches.reduce(
@@ -48,7 +55,15 @@ router.post('/execute', async (req: Request, res: Response) => {
   }
 
   try {
-    const { batches, ambiguities } = mode === 'receipt' ? parseReceiptText(text) : parseText(text);
+    let parseResult;
+    if (mode === 'receipt') {
+      parseResult = parseReceiptText(text);
+    } else if (mode === 'label') {
+      parseResult = parseLabelText(text);
+    } else {
+      parseResult = parseText(text);
+    }
+    const { batches, ambiguities } = parseResult;
 
     const results = {
       winesCreated: 0,

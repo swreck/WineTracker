@@ -43,7 +43,8 @@
       "Bash(do echo \"Attempt $i:\")",
       "Bash(done)",
       "Bash(echo:*)",
-      "Bash(do echo \"Test $i:\")"
+      "Bash(do echo \"Test $i:\")",
+      "Bash(wc -l echo \"  \\(above is number of output lines\\)\" __NEW_LINE_97637073fd0b206a__ echo \"4. First Wine Sample:\" curl -s https://winetracker.onrender.com/api/wines/1)"
     ]
   }
 }

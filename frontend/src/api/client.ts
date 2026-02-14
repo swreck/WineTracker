@@ -166,8 +166,22 @@ export const api = {
     request<PurchaseItem>('/purchases/items', { method: 'POST', body: JSON.stringify(data) }),
 
   // Import
-  previewImport: (text: string, mode?: 'standard' | 'receipt') =>
+  previewImport: (text: string, mode?: 'standard' | 'receipt' | 'label') =>
     request<ImportPreview>('/import/preview', { method: 'POST', body: JSON.stringify({ text, mode }) }),
-  executeImport: (text: string, mode?: 'standard' | 'receipt') =>
+  executeImport: (text: string, mode?: 'standard' | 'receipt' | 'label') =>
     request<ImportResult>('/import/execute', { method: 'POST', body: JSON.stringify({ text, mode }) }),
+
+  // Manual wine entry
+  createWineWithVintage: (data: {
+    name: string;
+    color: 'red' | 'white' | 'rose' | 'sparkling';
+    vintageYear: number;
+    price?: number;
+    quantity?: number;
+    purchaseDate?: string;
+  }) =>
+    request<{ wineCreated: boolean; vintageCreated: boolean; wine: Wine; vintage: Vintage }>(
+      '/wines/create-with-vintage',
+      { method: 'POST', body: JSON.stringify(data) }
+    ),
 };
