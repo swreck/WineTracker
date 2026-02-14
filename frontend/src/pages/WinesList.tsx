@@ -34,6 +34,11 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
   const [vintageMax, setVintageMax] = useState<string>('');
   const [showVintageFilter, setShowVintageFilter] = useState(false);
 
+  // Merge state
+  const [mergeSource, setMergeSource] = useState<Wine | null>(null);
+  const [mergeSearch, setMergeSearch] = useState('');
+  const [merging, setMerging] = useState(false);
+
   useEffect(() => {
     loadWines();
   }, [colorFilter]);
@@ -169,6 +174,38 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
     setShowVintageFilter(false);
   }
 
+  async function handleMerge(targetWine: Wine) {
+    if (!mergeSource || merging) return;
+
+    const confirmed = window.confirm(
+      `Merge "${mergeSource.name}" into "${targetWine.name}"?\n\n` +
+      `All vintages, tastings, and purchases from "${mergeSource.name}" ` +
+      `will be moved to "${targetWine.name}", and "${mergeSource.name}" will be deleted.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setMerging(true);
+      await api.mergeWines(targetWine.id, mergeSource.id);
+      setMergeSource(null);
+      setMergeSearch('');
+      await loadWines();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to merge wines');
+    } finally {
+      setMerging(false);
+    }
+  }
+
+  // Filter wines for merge search
+  const mergeSearchResults = mergeSource && mergeSearch.length >= 2
+    ? wines.filter(w =>
+        w.id !== mergeSource.id &&
+        w.name.toLowerCase().includes(mergeSearch.toLowerCase())
+      ).slice(0, 5)
+    : [];
+
   function SortHeader({ field, label }: { field: SortField; label: string }) {
     const isActive = sortField === field;
     return (
@@ -286,6 +323,7 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
               <SortHeader field="price" label="Price" />
               <SortHeader field="rating" label="Rating" />
               <SortHeader field="tastings" label="Tastings" />
+              <th className="actions-col"></th>
             </tr>
           </thead>
           <tbody>
@@ -334,6 +372,19 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
                       )}
                     </td>
                     <td>{wine.tastingCount || 0}</td>
+                    <td className="actions-cell">
+                      <button
+                        className="merge-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMergeSource(wine);
+                          setMergeSearch('');
+                        }}
+                        title="Merge with another wine"
+                      >
+                        Merge
+                      </button>
+                    </td>
                   </tr>
                   {isExpanded && wine.vintages && wine.vintages.map((vintage) => {
                     const vintagePrice = vintage.purchaseItems?.[0]?.pricePaid;
@@ -357,6 +408,7 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
                           ) : '-'}
                         </td>
                         <td>{vintage.tastingEvents?.length || 0}</td>
+                        <td></td>
                       </tr>
                     );
                   })}
@@ -370,6 +422,84 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
       <div className="list-summary">
         {filteredAndSortedWines.length} of {wines.length} wines
       </div>
+
+      {/* Merge Modal */}
+      {mergeSource && (
+        <div className="merge-modal-overlay" onClick={() => setMergeSource(null)}>
+          <div className="merge-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="merge-modal-header">
+              <h3>Merge "{mergeSource.name}"</h3>
+              <button className="close-btn" onClick={() => setMergeSource(null)}>×</button>
+            </div>
+
+            <div className="merge-modal-body">
+              <p>Select which wine to merge into (this wine will be kept):</p>
+
+              {/* Quick merge with adjacent wines */}
+              {(() => {
+                const currentIndex = filteredAndSortedWines.findIndex(w => w.id === mergeSource.id);
+                const prevWine = currentIndex > 0 ? filteredAndSortedWines[currentIndex - 1] : null;
+                const nextWine = currentIndex < filteredAndSortedWines.length - 1 ? filteredAndSortedWines[currentIndex + 1] : null;
+
+                return (prevWine || nextWine) ? (
+                  <div className="quick-merge-options">
+                    {prevWine && (
+                      <button
+                        className="quick-merge-btn"
+                        onClick={() => handleMerge(prevWine)}
+                        disabled={merging}
+                      >
+                        Merge into "{prevWine.name}" (above)
+                      </button>
+                    )}
+                    {nextWine && (
+                      <button
+                        className="quick-merge-btn"
+                        onClick={() => handleMerge(nextWine)}
+                        disabled={merging}
+                      >
+                        Merge into "{nextWine.name}" (below)
+                      </button>
+                    )}
+                  </div>
+                ) : null;
+              })()}
+
+              <div className="merge-search-section">
+                <label>Or search for a wine:</label>
+                <input
+                  type="text"
+                  placeholder="Search wines..."
+                  value={mergeSearch}
+                  onChange={(e) => setMergeSearch(e.target.value)}
+                  autoFocus
+                />
+                {mergeSearchResults.length > 0 && (
+                  <div className="merge-search-results">
+                    {mergeSearchResults.map((w) => (
+                      <button
+                        key={w.id}
+                        className="merge-search-result"
+                        onClick={() => handleMerge(w)}
+                        disabled={merging}
+                      >
+                        {w.name}
+                        {w.vintages && w.vintages.length > 0 && (
+                          <span className="vintages-hint">
+                            ({w.vintages.map(v => v.vintageYear).join(', ')})
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {merging && <div className="merging-indicator">Merging...</div>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

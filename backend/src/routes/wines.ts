@@ -272,6 +272,126 @@ router.delete('/:wineId/vintages/:vintageId', async (req: Request, res: Response
   }
 });
 
+// Merge two wines - moves all vintages, tastings, purchases from source to target
+router.post('/:targetId/merge/:sourceId', async (req: Request, res: Response) => {
+  const prisma: PrismaClient = req.app.locals.prisma;
+  const targetId = parseInt(req.params.targetId as string, 10);
+  const sourceId = parseInt(req.params.sourceId as string, 10);
+
+  if (targetId === sourceId) {
+    return res.status(400).json({ error: 'Cannot merge wine with itself' });
+  }
+
+  try {
+    // Get both wines with their vintages
+    const [targetWine, sourceWine] = await Promise.all([
+      prisma.wine.findUnique({
+        where: { id: targetId },
+        include: { vintages: true },
+      }),
+      prisma.wine.findUnique({
+        where: { id: sourceId },
+        include: {
+          vintages: {
+            include: {
+              tastingEvents: true,
+              purchaseItems: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    if (!targetWine) {
+      return res.status(404).json({ error: 'Target wine not found' });
+    }
+    if (!sourceWine) {
+      return res.status(404).json({ error: 'Source wine not found' });
+    }
+
+    const results = {
+      vintagesMoved: 0,
+      vintagesMerged: 0,
+      tastingsMoved: 0,
+      purchaseItemsMoved: 0,
+    };
+
+    // Process each vintage from source
+    for (const sourceVintage of sourceWine.vintages) {
+      // Check if target already has this vintage year
+      const existingTargetVintage = targetWine.vintages.find(
+        v => v.vintageYear === sourceVintage.vintageYear
+      );
+
+      if (existingTargetVintage) {
+        // Merge into existing vintage
+        // Move tastings
+        await prisma.tastingEvent.updateMany({
+          where: { vintageId: sourceVintage.id },
+          data: { vintageId: existingTargetVintage.id },
+        });
+        results.tastingsMoved += sourceVintage.tastingEvents.length;
+
+        // Move purchase items
+        await prisma.purchaseItem.updateMany({
+          where: { vintageId: sourceVintage.id },
+          data: {
+            vintageId: existingTargetVintage.id,
+            wineId: targetId,
+          },
+        });
+        results.purchaseItemsMoved += sourceVintage.purchaseItems.length;
+
+        // Merge seller notes if target doesn't have any
+        if (sourceVintage.sellerNotes && !existingTargetVintage.sellerNotes) {
+          await prisma.vintage.update({
+            where: { id: existingTargetVintage.id },
+            data: { sellerNotes: sourceVintage.sellerNotes },
+          });
+        }
+
+        // Delete the now-empty source vintage
+        await prisma.vintage.delete({
+          where: { id: sourceVintage.id },
+        });
+
+        results.vintagesMerged++;
+      } else {
+        // Move entire vintage to target wine
+        await prisma.vintage.update({
+          where: { id: sourceVintage.id },
+          data: { wineId: targetId },
+        });
+
+        // Update purchase items to point to target wine
+        await prisma.purchaseItem.updateMany({
+          where: { vintageId: sourceVintage.id },
+          data: { wineId: targetId },
+        });
+
+        results.vintagesMoved++;
+        results.tastingsMoved += sourceVintage.tastingEvents.length;
+        results.purchaseItemsMoved += sourceVintage.purchaseItems.length;
+      }
+    }
+
+    // Delete the now-empty source wine
+    await prisma.wine.delete({
+      where: { id: sourceId },
+    });
+
+    res.json({
+      success: true,
+      targetWine: targetWine.name,
+      sourceWine: sourceWine.name,
+      results,
+    });
+  } catch (error) {
+    console.error('Error merging wines:', error);
+    res.status(500).json({ error: 'Failed to merge wines' });
+  }
+});
+
 // Get favorites (highest rated wines)
 router.get('/favorites/list', async (req: Request, res: Response) => {
   const prisma: PrismaClient = req.app.locals.prisma;

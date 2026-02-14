@@ -147,6 +147,18 @@ export const api = {
     request<Wine>(`/wines/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteWine: (id: number) =>
     request<{ success: boolean }>(`/wines/${id}`, { method: 'DELETE' }),
+  mergeWines: (targetId: number, sourceId: number) =>
+    request<{
+      success: boolean;
+      targetWine: string;
+      sourceWine: string;
+      results: {
+        vintagesMoved: number;
+        vintagesMerged: number;
+        tastingsMoved: number;
+        purchaseItemsMoved: number;
+      };
+    }>(`/wines/${targetId}/merge/${sourceId}`, { method: 'POST' }),
   getFavorites: (params?: { minRating?: number; color?: string }) => {
     return request<Wine[]>(`/wines/favorites/list${buildQuery(params)}`);
   },
