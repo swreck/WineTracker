@@ -1056,6 +1056,118 @@ tbody tr:hover {
   font-style: italic;
 }
 
+/* Sortable table headers */
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+th.sortable:hover {
+  background: #eee;
+}
+
+th.sortable.active {
+  background: #e8e0e1;
+  color: #722f37;
+}
+
+.sort-indicator {
+  font-size: 0.7em;
+  opacity: 0.8;
+}
+
+/* Vintage filter button */
+.vintage-filter-btn {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.vintage-filter-btn:hover {
+  border-color: #722f37;
+}
+
+.vintage-filter-btn.active {
+  background: #722f37;
+  color: white;
+  border-color: #722f37;
+}
+
+/* Vintage filter panel */
+.vintage-filter-panel {
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.vintage-range {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.vintage-range label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.vintage-range label span {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.vintage-range select {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  min-width: 80px;
+}
+
+.range-separator {
+  color: #666;
+}
+
+.vintage-presets {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.vintage-presets button {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.vintage-presets button:hover {
+  border-color: #722f37;
+  background: #f5f0f0;
+}
+
+/* List summary */
+.list-summary {
+  margin-top: 1rem;
+  padding: 0.5rem;
+  text-align: center;
+  color: #666;
+  font-size: 0.85rem;
+}
+
 /* Button group */
 .button-group {
   display: flex;
