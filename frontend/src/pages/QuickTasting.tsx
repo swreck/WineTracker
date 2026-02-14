@@ -30,7 +30,25 @@ export default function QuickTasting({ onCancel, preselectedWine, preselectedVin
 
   // Tasting form
   const [rating, setRating] = useState<number | null>(null);
+  const [ratingLabel, setRatingLabel] = useState<string>('');
   const [notes, setNotes] = useState('');
+  const [showRatingPicker, setShowRatingPicker] = useState(false);
+
+  // Rating options: <5, 5, 5.5, 6, ... 10
+  const ratingOptions = [
+    { value: 4, label: '<5' },
+    { value: 5, label: '5' },
+    { value: 5.5, label: '5.5' },
+    { value: 6, label: '6' },
+    { value: 6.5, label: '6.5' },
+    { value: 7, label: '7' },
+    { value: 7.5, label: '7.5' },
+    { value: 8, label: '8' },
+    { value: 8.5, label: '8.5' },
+    { value: 9, label: '9' },
+    { value: 9.5, label: '9.5' },
+    { value: 10, label: '10' },
+  ];
 
   // Load recent wines on mount
   useEffect(() => {
@@ -97,8 +115,15 @@ export default function QuickTasting({ onCancel, preselectedWine, preselectedVin
       setSelectedVintage(null);
     }
     setRating(null);
+    setRatingLabel('');
     setNotes('');
     setShowNotes(false);
+  }
+
+  function selectRating(value: number, label: string) {
+    setRating(value);
+    setRatingLabel(label);
+    setShowRatingPicker(false);
   }
 
   async function handleSave() {
@@ -144,7 +169,7 @@ export default function QuickTasting({ onCancel, preselectedWine, preselectedVin
       <div className="quick-tasting">
         <div className="success-message">
           <span className="success-check">&#10003;</span>
-          {rating} for {selectedWine?.name} {selectedVintage?.vintageYear}
+          {ratingLabel} for {selectedWine?.name} {selectedVintage?.vintageYear}
         </div>
       </div>
     );
@@ -256,18 +281,36 @@ export default function QuickTasting({ onCancel, preselectedWine, preselectedVin
       </div>
 
       <div className="rating-section">
-        <div className="tap-to-rate">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-            <button
-              key={n}
-              className={`rate-btn ${rating === n ? 'selected' : ''} ${n >= 8 ? 'high' : n >= 5 ? 'mid' : 'low'}`}
-              onClick={() => setRating(n)}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
+        <button
+          className={`rating-picker-btn ${rating !== null ? 'has-rating' : ''}`}
+          onClick={() => setShowRatingPicker(true)}
+        >
+          {rating !== null ? (
+            <span className="selected-rating">{ratingLabel}</span>
+          ) : (
+            <span className="rating-placeholder">Tap to rate</span>
+          )}
+        </button>
       </div>
+
+      {showRatingPicker && (
+        <div className="rating-popup-overlay" onClick={() => setShowRatingPicker(false)}>
+          <div className="rating-popup" onClick={(e) => e.stopPropagation()}>
+            <div className="rating-popup-header">Rate this wine</div>
+            <div className="rating-options-grid">
+              {ratingOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  className={`rating-option ${rating === opt.value ? 'selected' : ''} ${opt.value >= 8 ? 'high' : opt.value >= 5 ? 'mid' : 'low'}`}
+                  onClick={() => selectRating(opt.value, opt.label)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {!showNotes ? (
         <button className="add-notes-link" onClick={() => setShowNotes(true)}>
@@ -292,7 +335,7 @@ export default function QuickTasting({ onCancel, preselectedWine, preselectedVin
         onClick={handleSave}
         disabled={saving || rating === null}
       >
-        {saving ? 'Saving...' : rating !== null ? `Save ${rating}` : 'Tap a rating'}
+        {saving ? 'Saving...' : rating !== null ? `Save ${ratingLabel}` : 'Tap to rate'}
       </button>
     </div>
   );

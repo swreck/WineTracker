@@ -1579,52 +1579,115 @@ th.sortable.active {
   color: #666;
 }
 
-/* Tap-to-rate UI */
+/* Rating picker button */
 .rating-section {
   padding: 1rem 0;
 }
 
-.tap-to-rate {
+.rating-picker-btn {
+  width: 100%;
+  padding: 1.25rem;
+  border: 2px dashed #ccc;
+  border-radius: 12px;
+  background: #fafafa;
+  cursor: pointer;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+.rating-picker-btn:hover {
+  border-color: #722f37;
+  background: #faf6f6;
+}
+
+.rating-picker-btn.has-rating {
+  border-style: solid;
+  border-color: #722f37;
+  background: white;
+}
+
+.rating-placeholder {
+  color: #888;
+}
+
+.selected-rating {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #722f37;
+}
+
+/* Rating popup overlay */
+.rating-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.rating-popup {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 320px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.rating-popup-header {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.rating-options-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.5rem;
 }
 
-.rate-btn {
-  padding: 1.25rem 0;
+.rating-option {
+  padding: 1rem 0.5rem;
   border: 2px solid #ddd;
   border-radius: 8px;
   background: white;
   cursor: pointer;
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   font-weight: 600;
   transition: all 0.15s ease;
 }
 
-.rate-btn:hover {
+.rating-option:hover {
   transform: scale(1.05);
 }
 
-.rate-btn.low {
+.rating-option.low {
   color: #b44;
 }
 
-.rate-btn.mid {
-  color: #886;
+.rating-option.mid {
+  color: #666;
 }
 
-.rate-btn.high {
-  color: #484;
+.rating-option.high {
+  color: #2a7a2a;
 }
 
-.rate-btn.selected {
+.rating-option.selected {
   background: #722f37;
   border-color: #722f37;
   color: white;
-  transform: scale(1.08);
 }
 
-.rate-btn.selected.high {
+.rating-option.selected.high {
   background: #2a7a2a;
   border-color: #2a7a2a;
 }
