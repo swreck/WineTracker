@@ -22,6 +22,14 @@ export default function WineDetail({ wineId, onBack, onSelectVintage }: Props) {
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<Wine>>({});
 
+  // Quick tasting state
+  const [addingTastingForVintage, setAddingTastingForVintage] = useState<number | null>(null);
+  const [newTasting, setNewTasting] = useState({
+    tastingDate: new Date().toISOString().split('T')[0],
+    rating: '',
+    notes: '',
+  });
+
   useEffect(() => {
     loadWine();
   }, [wineId]);
@@ -59,6 +67,46 @@ export default function WineDetail({ wineId, onBack, onSelectVintage }: Props) {
       onBack();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete');
+    }
+  }
+
+  function startAddTasting(vintageId: number) {
+    setAddingTastingForVintage(vintageId);
+    setNewTasting({
+      tastingDate: new Date().toISOString().split('T')[0],
+      rating: '',
+      notes: '',
+    });
+  }
+
+  function setToday() {
+    setNewTasting({ ...newTasting, tastingDate: new Date().toISOString().split('T')[0] });
+  }
+
+  async function handleAddTasting() {
+    if (!addingTastingForVintage) return;
+    if (!newTasting.rating) {
+      setError('Rating is required');
+      return;
+    }
+
+    try {
+      await api.createTasting({
+        vintageId: addingTastingForVintage,
+        tastingDate: newTasting.tastingDate,
+        rating: parseFloat(newTasting.rating),
+        notes: newTasting.notes || undefined,
+      });
+      await loadWine();
+      setAddingTastingForVintage(null);
+      setNewTasting({
+        tastingDate: new Date().toISOString().split('T')[0],
+        rating: '',
+        notes: '',
+      });
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to add tasting');
     }
   }
 
@@ -152,12 +200,50 @@ export default function WineDetail({ wineId, onBack, onSelectVintage }: Props) {
                     <span className="rating">Avg: {avgRating.toFixed(1)}</span>
                   )}
                   <button
+                    className="add-tasting-btn"
+                    onClick={() => startAddTasting(vintage.id)}
+                  >
+                    + Tasting
+                  </button>
+                  <button
                     className="edit-button"
                     onClick={() => onSelectVintage(vintage.id)}
                   >
                     Edit
                   </button>
                 </div>
+
+                {addingTastingForVintage === vintage.id && (
+                  <div className="inline-add-tasting">
+                    <div className="date-row">
+                      <input
+                        type="date"
+                        value={newTasting.tastingDate}
+                        onChange={(e) => setNewTasting({ ...newTasting, tastingDate: e.target.value })}
+                      />
+                      <button className="today-btn" onClick={setToday}>Today</button>
+                    </div>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="1"
+                      max="10"
+                      placeholder="Rating (1-10)"
+                      value={newTasting.rating}
+                      onChange={(e) => setNewTasting({ ...newTasting, rating: e.target.value })}
+                    />
+                    <textarea
+                      placeholder="Notes (optional)"
+                      value={newTasting.notes}
+                      onChange={(e) => setNewTasting({ ...newTasting, notes: e.target.value })}
+                      rows={2}
+                    />
+                    <div className="form-actions">
+                      <button onClick={handleAddTasting}>Save</button>
+                      <button onClick={() => setAddingTastingForVintage(null)}>Cancel</button>
+                    </div>
+                  </div>
+                )}
 
                 {vintage.sellerNotes && (
                   <p className="seller-notes">{vintage.sellerNotes}</p>
