@@ -4,25 +4,40 @@ import type { Wine, Vintage } from '../api/client';
 
 interface Props {
   onCancel: () => void;
+  // Optional: pre-select a wine/vintage (from wines list quick-rate)
+  preselectedWine?: Wine;
+  preselectedVintage?: Vintage;
 }
 
-export default function QuickTasting({ onCancel }: Props) {
+interface RecentWine {
+  wine: Wine;
+  vintage: Vintage;
+  lastTasted: string;
+}
+
+export default function QuickTasting({ onCancel, preselectedWine, preselectedVintage }: Props) {
   const [search, setSearch] = useState('');
   const [wines, setWines] = useState<Wine[]>([]);
-  const [selectedWine, setSelectedWine] = useState<Wine | null>(null);
-  const [selectedVintage, setSelectedVintage] = useState<Vintage | null>(null);
+  const [recentWines, setRecentWines] = useState<RecentWine[]>([]);
+  const [selectedWine, setSelectedWine] = useState<Wine | null>(preselectedWine || null);
+  const [selectedVintage, setSelectedVintage] = useState<Vintage | null>(preselectedVintage || null);
   const [loading, setLoading] = useState(false);
+  const [loadingRecent, setLoadingRecent] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
 
   // Tasting form
-  const [tastingDate, setTastingDate] = useState(
-    new Date().toISOString().split('T')[0]
-  );
-  const [rating, setRating] = useState('');
+  const [rating, setRating] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
 
+  // Load recent wines on mount
+  useEffect(() => {
+    loadRecentWines();
+  }, []);
+
+  // Search wines when typing
   useEffect(() => {
     if (search.length >= 2) {
       loadWines();
@@ -30,6 +45,35 @@ export default function QuickTasting({ onCancel }: Props) {
       setWines([]);
     }
   }, [search]);
+
+  async function loadRecentWines() {
+    try {
+      setLoadingRecent(true);
+      const tastings = await api.getRecentTastings(10);
+
+      // Dedupe by vintage ID, keeping most recent
+      const seen = new Set<number>();
+      const recent: RecentWine[] = [];
+
+      for (const t of tastings) {
+        if (t.vintage && t.vintage.wine && !seen.has(t.vintage.id)) {
+          seen.add(t.vintage.id);
+          recent.push({
+            wine: t.vintage.wine,
+            vintage: t.vintage,
+            lastTasted: t.tastingDate,
+          });
+        }
+        if (recent.length >= 5) break;
+      }
+
+      setRecentWines(recent);
+    } catch (e) {
+      console.error('Failed to load recent wines:', e);
+    } finally {
+      setLoadingRecent(false);
+    }
+  }
 
   async function loadWines() {
     try {
@@ -43,14 +87,18 @@ export default function QuickTasting({ onCancel }: Props) {
     }
   }
 
-  function selectWine(wine: Wine) {
+  function selectWine(wine: Wine, vintage?: Vintage) {
     setSelectedWine(wine);
-    // If only one vintage, auto-select it
-    if (wine.vintages && wine.vintages.length === 1) {
+    if (vintage) {
+      setSelectedVintage(vintage);
+    } else if (wine.vintages && wine.vintages.length === 1) {
       setSelectedVintage(wine.vintages[0]);
     } else {
       setSelectedVintage(null);
     }
+    setRating(null);
+    setNotes('');
+    setShowNotes(false);
   }
 
   async function handleSave() {
@@ -58,14 +106,8 @@ export default function QuickTasting({ onCancel }: Props) {
       setError('Please select a vintage');
       return;
     }
-    if (!rating) {
-      setError('Please enter a rating');
-      return;
-    }
-
-    const ratingNum = parseFloat(rating);
-    if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 10) {
-      setError('Rating must be between 1 and 10');
+    if (rating === null) {
+      setError('Please tap a rating');
       return;
     }
 
@@ -74,20 +116,22 @@ export default function QuickTasting({ onCancel }: Props) {
       setError(null);
       await api.createTasting({
         vintageId: selectedVintage.id,
-        tastingDate,
-        rating: ratingNum,
+        tastingDate: new Date().toISOString().split('T')[0],
+        rating,
         notes: notes || undefined,
       });
       setSuccess(true);
-      // Reset for another entry
+      // Refresh recent wines and reset for another entry
+      loadRecentWines();
       setTimeout(() => {
         setSelectedWine(null);
         setSelectedVintage(null);
         setSearch('');
-        setRating('');
+        setRating(null);
         setNotes('');
+        setShowNotes(false);
         setSuccess(false);
-      }, 1500);
+      }, 1200);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save');
     } finally {
@@ -99,32 +143,49 @@ export default function QuickTasting({ onCancel }: Props) {
     return (
       <div className="quick-tasting">
         <div className="success-message">
-          Tasting saved for {selectedWine?.name} {selectedVintage?.vintageYear}
+          <span className="success-check">&#10003;</span>
+          {rating} for {selectedWine?.name} {selectedVintage?.vintageYear}
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="quick-tasting">
-      <div className="quick-tasting-header">
-        <h2>Quick Tasting</h2>
-        <button className="close-button" onClick={onCancel}>
-          Done
-        </button>
-      </div>
+  // Wine selection phase
+  if (!selectedWine) {
+    return (
+      <div className="quick-tasting">
+        <div className="quick-tasting-header">
+          <h2>Quick Tasting</h2>
+          <button className="close-button" onClick={onCancel}>Done</button>
+        </div>
 
-      {!selectedWine ? (
+        {/* Recent wines - one tap to rate again */}
+        {!loadingRecent && recentWines.length > 0 && (
+          <div className="recent-wines">
+            <div className="section-label">Recent</div>
+            {recentWines.map((r) => (
+              <div
+                key={`${r.wine.id}-${r.vintage.id}`}
+                className="recent-wine-item"
+                onClick={() => selectWine(r.wine, r.vintage)}
+              >
+                <span className="wine-name">{r.wine.name}</span>
+                <span className="vintage-year">{r.vintage.vintageYear}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Search */}
         <div className="wine-search">
           <input
             type="text"
             placeholder="Search wines..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            autoFocus
           />
 
-          {loading && <div className="loading">Searching...</div>}
+          {loading && <div className="loading-small">Searching...</div>}
 
           {wines.length > 0 && (
             <div className="search-results">
@@ -135,11 +196,9 @@ export default function QuickTasting({ onCancel }: Props) {
                   onClick={() => selectWine(wine)}
                 >
                   <span className="wine-name">{wine.name}</span>
-                  <span className={`color-badge ${wine.color}`}>
-                    {wine.color}
-                  </span>
+                  <span className={`color-dot ${wine.color}`}></span>
                   {wine.vintages && wine.vintages.length > 0 && (
-                    <span className="vintages">
+                    <span className="vintages-hint">
                       {wine.vintages.map((v) => v.vintageYear).join(', ')}
                     </span>
                   )}
@@ -149,102 +208,92 @@ export default function QuickTasting({ onCancel }: Props) {
           )}
 
           {search.length >= 2 && wines.length === 0 && !loading && (
-            <div className="no-results">No wines found for "{search}"</div>
+            <div className="no-results">No wines found</div>
           )}
         </div>
-      ) : (
-        <div className="tasting-form">
-          <div className="selected-wine">
-            <strong>{selectedWine.name}</strong>
-            <button
-              className="change-wine"
-              onClick={() => {
-                setSelectedWine(null);
-                setSelectedVintage(null);
-              }}
-            >
-              Change
-            </button>
-          </div>
+      </div>
+    );
+  }
 
-          {!selectedVintage &&
-            selectedWine.vintages &&
-            selectedWine.vintages.length > 1 && (
-              <div className="vintage-selector">
-                <label>Select Vintage:</label>
-                <div className="vintage-options">
-                  {selectedWine.vintages.map((v) => (
-                    <button
-                      key={v.id}
-                      className="vintage-option"
-                      onClick={() => setSelectedVintage(v)}
-                    >
-                      {v.vintageYear}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+  // Vintage selection phase (if multiple)
+  if (!selectedVintage && selectedWine.vintages && selectedWine.vintages.length > 1) {
+    return (
+      <div className="quick-tasting">
+        <div className="quick-tasting-header">
+          <h2>{selectedWine.name}</h2>
+          <button className="close-button" onClick={() => setSelectedWine(null)}>Back</button>
+        </div>
 
-          {selectedVintage && (
-            <>
-              <div className="vintage-selected">
-                Vintage: <strong>{selectedVintage.vintageYear}</strong>
-                {selectedWine.vintages && selectedWine.vintages.length > 1 && (
-                  <button
-                    className="change-vintage"
-                    onClick={() => setSelectedVintage(null)}
-                  >
-                    Change
-                  </button>
-                )}
-              </div>
-
-              <div className="form-row">
-                <label>Date:</label>
-                <input
-                  type="date"
-                  value={tastingDate}
-                  onChange={(e) => setTastingDate(e.target.value)}
-                />
-              </div>
-
-              <div className="form-row">
-                <label>Rating (1-10):</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  min="1"
-                  max="10"
-                  value={rating}
-                  onChange={(e) => setRating(e.target.value)}
-                  placeholder="8.5"
-                />
-              </div>
-
-              <div className="form-row">
-                <label>Notes (optional):</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Tasting notes..."
-                  rows={3}
-                />
-              </div>
-
-              {error && <div className="error">{error}</div>}
-
+        <div className="vintage-select-grid">
+          {selectedWine.vintages
+            .sort((a, b) => b.vintageYear - a.vintageYear)
+            .map((v) => (
               <button
-                className="primary-button save-tasting"
-                onClick={handleSave}
-                disabled={saving}
+                key={v.id}
+                className="vintage-select-btn"
+                onClick={() => setSelectedVintage(v)}
               >
-                {saving ? 'Saving...' : 'Save Tasting'}
+                {v.vintageYear}
               </button>
-            </>
-          )}
+            ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Rating phase - tap to rate
+  return (
+    <div className="quick-tasting">
+      <div className="quick-tasting-header">
+        <h2>
+          {selectedWine.name}
+          {selectedVintage && <span className="header-vintage"> '{String(selectedVintage.vintageYear).slice(-2)}</span>}
+        </h2>
+        <button className="close-button" onClick={() => {
+          setSelectedWine(null);
+          setSelectedVintage(null);
+        }}>Back</button>
+      </div>
+
+      <div className="rating-section">
+        <div className="tap-to-rate">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+            <button
+              key={n}
+              className={`rate-btn ${rating === n ? 'selected' : ''} ${n >= 8 ? 'high' : n >= 5 ? 'mid' : 'low'}`}
+              onClick={() => setRating(n)}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {!showNotes ? (
+        <button className="add-notes-link" onClick={() => setShowNotes(true)}>
+          + Add notes
+        </button>
+      ) : (
+        <div className="notes-section">
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Tasting notes..."
+            rows={2}
+            autoFocus
+          />
         </div>
       )}
+
+      {error && <div className="error">{error}</div>}
+
+      <button
+        className="save-tasting-btn"
+        onClick={handleSave}
+        disabled={saving || rating === null}
+      >
+        {saving ? 'Saving...' : rating !== null ? `Save ${rating}` : 'Tap a rating'}
+      </button>
     </div>
   );
 }

@@ -147,8 +147,11 @@ export const api = {
   },
 
   // Tastings
-  getTastings: (params?: { startDate?: string; endDate?: string; minRating?: number }) => {
+  getTastings: (params?: { startDate?: string; endDate?: string; minRating?: number; limit?: number }) => {
     return request<TastingEvent[]>(`/tastings${buildQuery(params)}`);
+  },
+  getRecentTastings: (limit: number = 5) => {
+    return request<TastingEvent[]>(`/tastings?limit=${limit}`);
   },
   createTasting: (data: { vintageId: number; tastingDate: string; rating: number; notes?: string }) =>
     request<TastingEvent>('/tastings', { method: 'POST', body: JSON.stringify(data) }),

@@ -1479,5 +1479,214 @@ th.sortable.active {
   padding: 2rem;
   border-radius: 8px;
   text-align: center;
+  font-size: 1.2rem;
+}
+
+.success-check {
+  display: inline-block;
+  margin-right: 0.5rem;
+  font-size: 1.4rem;
+}
+
+/* Recent wines section */
+.recent-wines {
+  margin-bottom: 1.5rem;
+}
+
+.section-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: #888;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.05em;
+}
+
+.recent-wine-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  background: #f8f8f8;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+}
+
+.recent-wine-item:hover {
+  background: #f0e8e9;
+}
+
+.recent-wine-item .wine-name {
+  font-weight: 500;
+  flex: 1;
+}
+
+.recent-wine-item .vintage-year {
+  color: #666;
+  font-size: 0.95rem;
+}
+
+/* Search improvements */
+.loading-small {
+  padding: 1rem;
+  color: #666;
+  text-align: center;
+}
+
+.color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.color-dot.red { background: #722f37; }
+.color-dot.white { background: #f5e6a3; border: 1px solid #ddd; }
+.color-dot.rose { background: #f4a7b9; }
+.color-dot.sparkling { background: #e8e8e8; border: 1px solid #ccc; }
+
+.vintages-hint {
+  color: #888;
+  font-size: 0.85rem;
+}
+
+/* Vintage selection grid */
+.vintage-select-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 0.75rem;
+  padding: 1rem 0;
+}
+
+.vintage-select-btn {
+  padding: 1.25rem 0.5rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
   font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.vintage-select-btn:hover {
+  border-color: #722f37;
+  background: #faf6f6;
+}
+
+/* Header vintage display */
+.header-vintage {
+  font-weight: normal;
+  color: #666;
+}
+
+/* Tap-to-rate UI */
+.rating-section {
+  padding: 1rem 0;
+}
+
+.tap-to-rate {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+}
+
+.rate-btn {
+  padding: 1.25rem 0;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 1.3rem;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.rate-btn:hover {
+  transform: scale(1.05);
+}
+
+.rate-btn.low {
+  color: #b44;
+}
+
+.rate-btn.mid {
+  color: #886;
+}
+
+.rate-btn.high {
+  color: #484;
+}
+
+.rate-btn.selected {
+  background: #722f37;
+  border-color: #722f37;
+  color: white;
+  transform: scale(1.08);
+}
+
+.rate-btn.selected.high {
+  background: #2a7a2a;
+  border-color: #2a7a2a;
+}
+
+/* Add notes link */
+.add-notes-link {
+  display: block;
+  width: 100%;
+  padding: 0.75rem;
+  background: none;
+  border: 1px dashed #ccc;
+  border-radius: 8px;
+  color: #666;
+  cursor: pointer;
+  text-align: center;
+  margin: 1rem 0;
+}
+
+.add-notes-link:hover {
+  border-color: #722f37;
+  color: #722f37;
+}
+
+/* Notes section */
+.notes-section {
+  margin: 1rem 0;
+}
+
+.notes-section textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 1rem;
+  resize: vertical;
+}
+
+.notes-section textarea:focus {
+  outline: none;
+  border-color: #722f37;
+}
+
+/* Save tasting button */
+.save-tasting-btn {
+  width: 100%;
+  padding: 1.1rem;
+  background: #722f37;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+.save-tasting-btn:hover:not(:disabled) {
+  background: #5a252c;
+}
+
+.save-tasting-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
