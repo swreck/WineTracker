@@ -13,9 +13,11 @@ export default function VintageDetail({ vintageId, onBack, fromWineId }: Props) 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddTasting, setShowAddTasting] = useState(false);
+  const [showNewRatingPicker, setShowNewRatingPicker] = useState(false);
   const [newTasting, setNewTasting] = useState({
-    tastingDate: new Date().toISOString().split('T')[0],
+    tastingDate: '',
     rating: '',
+    ratingLabel: '',
     notes: '',
   });
   const [editingPriceId, setEditingPriceId] = useState<number | null>(null);
@@ -91,20 +93,26 @@ export default function VintageDetail({ vintageId, onBack, fromWineId }: Props) 
     try {
       await api.createTasting({
         vintageId,
-        tastingDate: newTasting.tastingDate,
+        tastingDate: newTasting.tastingDate || undefined,
         rating: parseFloat(newTasting.rating),
         notes: newTasting.notes || undefined,
       });
       await loadVintage();
       setShowAddTasting(false);
       setNewTasting({
-        tastingDate: new Date().toISOString().split('T')[0],
+        tastingDate: '',
         rating: '',
+        ratingLabel: '',
         notes: '',
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to add tasting');
     }
+  }
+
+  function handleNewRatingSelect(value: number, label: string) {
+    setNewTasting({ ...newTasting, rating: String(value), ratingLabel: label });
+    setShowNewRatingPicker(false);
   }
 
   async function handleDeleteTasting(id: number) {
@@ -488,20 +496,20 @@ export default function VintageDetail({ vintageId, onBack, fromWineId }: Props) 
 
         {showAddTasting && (
           <div className="add-tasting-form">
-            <input
-              type="date"
-              value={newTasting.tastingDate}
-              onChange={(e) => setNewTasting({ ...newTasting, tastingDate: e.target.value })}
-            />
-            <input
-              type="number"
-              step="0.1"
-              min="1"
-              max="10"
-              placeholder="Rating (1-10)"
-              value={newTasting.rating}
-              onChange={(e) => setNewTasting({ ...newTasting, rating: e.target.value })}
-            />
+            <div className="date-row">
+              <input
+                type="date"
+                value={newTasting.tastingDate}
+                onChange={(e) => setNewTasting({ ...newTasting, tastingDate: e.target.value })}
+              />
+              <span className="date-hint">(optional)</span>
+            </div>
+            <button
+              className={`inline-rating-btn ${newTasting.rating ? 'has-rating' : ''}`}
+              onClick={() => setShowNewRatingPicker(true)}
+            >
+              {newTasting.rating ? newTasting.ratingLabel : 'Tap to rate'}
+            </button>
             <textarea
               placeholder="Tasting notes..."
               value={newTasting.notes}
@@ -511,6 +519,26 @@ export default function VintageDetail({ vintageId, onBack, fromWineId }: Props) 
             <div className="form-actions">
               <button onClick={handleAddTasting}>Save</button>
               <button onClick={() => setShowAddTasting(false)}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {/* Rating picker popup for new tasting */}
+        {showNewRatingPicker && (
+          <div className="rating-popup-overlay" onClick={() => setShowNewRatingPicker(false)}>
+            <div className="rating-popup" onClick={(e) => e.stopPropagation()}>
+              <div className="rating-popup-header">Select Rating</div>
+              <div className="rating-options-grid">
+                {ratingOptions.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    className={`rating-option ${value < 6 ? 'low' : value >= 8 ? 'high' : 'mid'} ${newTasting.rating === String(value) ? 'selected' : ''}`}
+                    onClick={() => handleNewRatingSelect(value, label)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}

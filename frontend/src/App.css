@@ -1780,10 +1780,16 @@ th.sortable.active {
   gap: 0.5rem;
 }
 
-.inline-add-tasting .date-row {
+.inline-add-tasting .date-row,
+.add-tasting-form .date-row {
   display: flex;
   gap: 0.5rem;
   align-items: center;
+}
+
+.date-hint {
+  font-size: 0.8rem;
+  color: #888;
 }
 
 .inline-add-tasting input[type="date"] {
