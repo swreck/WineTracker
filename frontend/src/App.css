@@ -429,6 +429,234 @@ tbody tr:hover {
   font-style: italic;
 }
 
+/* Expandable vintage cards */
+.vintage-card-expandable {
+  background: #f9f9f9;
+  border-radius: 4px;
+  border-left: 3px solid #722f37;
+  margin-bottom: 0.75rem;
+}
+
+.vintage-card-expandable .vintage-header-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+}
+
+.vintage-card-expandable .vintage-header-row:hover {
+  background: #f0f0f0;
+}
+
+.vintage-card-expandable .expand-icon {
+  font-size: 0.75rem;
+  color: #666;
+  width: 1rem;
+}
+
+.vintage-card-expandable .source-badge {
+  background: #e0e0e0;
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  color: #555;
+}
+
+.vintage-expanded-content {
+  padding: 0 1rem 1rem 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.vintage-field {
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+}
+
+.vintage-field strong {
+  margin-right: 0.5rem;
+}
+
+.vintage-field .field-value {
+  color: #444;
+}
+
+.vintage-field .inline-edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.vintage-field .inline-edit select,
+.vintage-field .inline-edit input[type="text"] {
+  padding: 0.35rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.vintage-field .inline-edit textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+.vintage-section {
+  margin: 1rem 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eee;
+}
+
+.vintage-section .section-header {
+  margin-bottom: 0.5rem;
+}
+
+.vintage-section .section-header strong {
+  font-size: 0.9rem;
+}
+
+.purchase-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
+}
+
+.purchase-list li {
+  padding: 0.35rem 0;
+  font-size: 0.9rem;
+}
+
+.vintage-actions {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eee;
+}
+
+.empty-small {
+  color: #888;
+  font-size: 0.85rem;
+  font-style: italic;
+  margin: 0.5rem 0;
+}
+
+.small-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  background: #722f37;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.small-btn:hover {
+  background: #8b3a42;
+}
+
+.edit-inline-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.9rem;
+  color: #666;
+  margin-left: 0.5rem;
+}
+
+.edit-inline-btn:hover {
+  color: #722f37;
+}
+
+.delete-inline-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.15rem 0.35rem;
+  font-size: 1.1rem;
+  color: #999;
+}
+
+.delete-inline-btn:hover {
+  color: #c00;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover {
+  text-decoration: underline;
+}
+
+.date-edit, .price-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.date-edit input, .price-edit input {
+  padding: 0.25rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.date-edit button, .price-edit button {
+  padding: 0.2rem 0.4rem;
+  border: none;
+  background: #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.error-banner {
+  background: #fee;
+  color: #c00;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.delete-button.small {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.add-purchase-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #f5f5f5;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+  align-items: center;
+}
+
+.add-purchase-form input {
+  padding: 0.35rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.add-purchase-form button {
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.add-purchase-form button:first-of-type {
+  background: #722f37;
+  color: white;
+  border: none;
+}
+
+.add-purchase-form button:last-of-type {
+  background: white;
+  border: 1px solid #ccc;
+}
+
 /* Vintage detail */
 .vintage-header {
   margin-bottom: 2rem;

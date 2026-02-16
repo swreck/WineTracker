@@ -7,7 +7,6 @@ import { AlphabeticalJump } from '../components/AlphabeticalJump';
 
 interface Props {
   onSelectWine: (id: number) => void;
-  onSelectVintage: (vintageId: number, wineId: number) => void;
 }
 
 const colorLabels: Record<string, string> = {
@@ -20,7 +19,7 @@ const colorLabels: Record<string, string> = {
 type SortField = 'name' | 'vintage' | 'price' | 'rating' | 'tastings';
 type SortDir = 'asc' | 'desc';
 
-export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
+export default function WinesList({ onSelectWine }: Props) {
   const [wines, setWines] = useState<Wine[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -452,11 +451,8 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
 
                 if (hasMultipleVintages) {
                   toggleExpand(wine.id);
-                } else if (wine.vintages && wine.vintages.length === 1) {
-                  // Single vintage - go directly to vintage detail
-                  saveScrollPosition();
-                  onSelectVintage(wine.vintages[0].id, wine.id);
                 } else {
+                  // Go to wine detail (vintage is expanded inline there)
                   saveScrollPosition();
                   onSelectWine(wine.id);
                 }
@@ -519,7 +515,7 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
                         className="vintage-row"
                         onClick={() => {
                           saveScrollPosition();
-                          onSelectVintage(vintage.id, wine.id);
+                          onSelectWine(wine.id);
                         }}
                       >
                         <td className="vintage-indent">↳ {vintage.vintageYear}</td>

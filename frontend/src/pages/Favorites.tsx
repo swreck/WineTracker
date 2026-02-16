@@ -4,7 +4,6 @@ import type { Wine, Vintage } from '../api/client';
 
 interface Props {
   onSelectWine: (id: number) => void;
-  onSelectVintage: (vintageId: number, wineId: number) => void;
 }
 
 type ViewMode = 'wines' | 'vintages';
@@ -16,7 +15,7 @@ const colorLabels: Record<string, string> = {
   sparkling: 'Sparkling',
 };
 
-export default function Favorites({ onSelectWine, onSelectVintage }: Props) {
+export default function Favorites({ onSelectWine }: Props) {
   const [mode, setMode] = useState<ViewMode>('wines');
   const [wines, setWines] = useState<Wine[]>([]);
   const [vintages, setVintages] = useState<Vintage[]>([]);
@@ -177,7 +176,7 @@ export default function Favorites({ onSelectWine, onSelectVintage }: Props) {
               </thead>
               <tbody>
                 {vintages.map((vintage, i) => (
-                  <tr key={vintage.id} onClick={() => vintage.wine && onSelectVintage(vintage.id, vintage.wine.id)}>
+                  <tr key={vintage.id} onClick={() => vintage.wine && onSelectWine(vintage.wine.id)}>
                     <td className="rank">{i + 1}</td>
                     <td>{vintage.wine?.name}</td>
                     <td>{vintage.vintageYear}</td>

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import WinesList from './pages/WinesList';
 import WineDetail from './pages/WineDetail';
-import VintageDetail from './pages/VintageDetail';
 import Import from './pages/Import';
 import Favorites from './pages/Favorites';
 import QuickTasting from './pages/QuickTasting';
@@ -11,7 +10,6 @@ import './App.css';
 type Page =
   | { type: 'wines' }
   | { type: 'wine'; id: number }
-  | { type: 'vintage'; id: number; fromWineId?: number }
   | { type: 'import' }
   | { type: 'favorites' }
   | { type: 'quick-tasting' };
@@ -58,25 +56,13 @@ function App() {
         {page.type === 'wines' && (
           <WinesList
             onSelectWine={(id) => navigate({ type: 'wine', id })}
-            onSelectVintage={(vintageId, wineId) => navigate({ type: 'vintage', id: vintageId, fromWineId: wineId })}
           />
         )}
         {page.type === 'wine' && (
           <WineDetail
             wineId={page.id}
             onBack={() => navigate({ type: 'wines' })}
-            onSelectVintage={(id) => navigate({ type: 'vintage', id, fromWineId: page.id })}
             onNavigateWine={(id) => navigate({ type: 'wine', id })}
-          />
-        )}
-        {page.type === 'vintage' && (
-          <VintageDetail
-            vintageId={page.id}
-            onBack={() => page.fromWineId
-              ? navigate({ type: 'wine', id: page.fromWineId })
-              : navigate({ type: 'wines' })
-            }
-            fromWineId={page.fromWineId}
           />
         )}
         {page.type === 'import' && (
@@ -85,7 +71,6 @@ function App() {
         {page.type === 'favorites' && (
           <Favorites
             onSelectWine={(id) => navigate({ type: 'wine', id })}
-            onSelectVintage={(vintageId, wineId) => navigate({ type: 'vintage', id: vintageId, fromWineId: wineId })}
           />
         )}
         {page.type === 'quick-tasting' && (
