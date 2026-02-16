@@ -1080,6 +1080,22 @@ tbody tr:hover {
   border-radius: 4px;
 }
 
+.vintage-filter-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.vintage-filter-inline select {
+  padding: 0.35rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.vintage-filter-inline span {
+  color: #666;
+}
+
 .favorites-table {
   background: white;
 }

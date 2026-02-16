@@ -24,6 +24,15 @@ export default function Favorites({ onSelectWine }: Props) {
   const [minRating, setMinRating] = useState(7);
   const [colorFilter, setColorFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
+  const [vintageMin, setVintageMin] = useState('');
+  const [vintageMax, setVintageMax] = useState('');
+
+  // Generate year options for vintage filter
+  const currentYear = new Date().getFullYear();
+  const yearOptions: number[] = [];
+  for (let y = currentYear; y >= 1990; y--) {
+    yearOptions.push(y);
+  }
 
   useEffect(() => {
     loadFavorites();
@@ -107,6 +116,28 @@ export default function Favorites({ onSelectWine }: Props) {
               </select>
             </>
           )}
+
+          <div className="vintage-filter-inline">
+            <select
+              value={vintageMin}
+              onChange={(e) => setVintageMin(e.target.value)}
+            >
+              <option value="">From Year</option>
+              {yearOptions.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+            <span>-</span>
+            <select
+              value={vintageMax}
+              onChange={(e) => setVintageMax(e.target.value)}
+            >
+              <option value="">To Year</option>
+              {yearOptions.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -114,9 +145,20 @@ export default function Favorites({ onSelectWine }: Props) {
       {error && <div className="error">{error}</div>}
 
       {!loading && !error && mode === 'wines' && (() => {
-        const filteredWines = sourceFilter
-          ? wines.filter(w => w.vintages?.some(v => v.source === sourceFilter))
-          : wines;
+        let filteredWines = wines;
+
+        if (sourceFilter) {
+          filteredWines = filteredWines.filter(w => w.vintages?.some(v => v.source === sourceFilter));
+        }
+
+        if (vintageMin || vintageMax) {
+          const min = vintageMin ? parseInt(vintageMin) : 0;
+          const max = vintageMax ? parseInt(vintageMax) : 9999;
+          filteredWines = filteredWines.filter(w =>
+            w.vintages?.some(v => v.vintageYear >= min && v.vintageYear <= max)
+          );
+        }
+
         return (
         <>
           {filteredWines.length === 0 ? (
@@ -157,9 +199,18 @@ export default function Favorites({ onSelectWine }: Props) {
         );
       })()}
 
-      {!loading && !error && mode === 'vintages' && (
+      {!loading && !error && mode === 'vintages' && (() => {
+        let filteredVintages = vintages;
+
+        if (vintageMin || vintageMax) {
+          const min = vintageMin ? parseInt(vintageMin) : 0;
+          const max = vintageMax ? parseInt(vintageMax) : 9999;
+          filteredVintages = filteredVintages.filter(v => v.vintageYear >= min && v.vintageYear <= max);
+        }
+
+        return (
         <>
-          {vintages.length === 0 ? (
+          {filteredVintages.length === 0 ? (
             <div className="empty">
               No vintages with rating ≥ {minRating}. Try lowering the threshold.
             </div>
@@ -175,7 +226,7 @@ export default function Favorites({ onSelectWine }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {vintages.map((vintage, i) => (
+                {filteredVintages.map((vintage, i) => (
                   <tr key={vintage.id} onClick={() => vintage.wine && onSelectWine(vintage.wine.id)}>
                     <td className="rank">{i + 1}</td>
                     <td>{vintage.wine?.name}</td>
@@ -190,7 +241,8 @@ export default function Favorites({ onSelectWine }: Props) {
             </table>
           )}
         </>
-      )}
+        );
+      })()}
     </div>
   );
 }
