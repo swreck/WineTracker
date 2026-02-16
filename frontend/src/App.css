@@ -2137,6 +2137,139 @@ th.sortable.active {
   color: #666;
 }
 
+/* Merge preview modal */
+.merge-preview-modal {
+  max-width: 500px;
+}
+
+.merge-summary {
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+.conflict-section {
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.conflict-section h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.conflict-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.conflict-row:last-of-type {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.conflict-field {
+  font-weight: 500;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.conflict-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.conflict-option.selected {
+  border-color: #722f37;
+  background: #faf5f5;
+}
+
+.conflict-option input {
+  margin-top: 0.15rem;
+}
+
+.conflict-value {
+  word-break: break-word;
+}
+
+.merge-note {
+  font-size: 0.85rem;
+  color: #666;
+  margin: 0.5rem 0 0 0;
+}
+
+.no-conflicts {
+  color: #28a745;
+  font-weight: 500;
+  padding: 0.5rem 0;
+}
+
+.unique-vintages-info {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 1rem;
+}
+
+.unique-vintages-info p {
+  margin: 0.25rem 0;
+}
+
+.merge-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.merge-confirm-btn {
+  flex: 1;
+  padding: 0.75rem;
+  background: #722f37;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.merge-confirm-btn:hover:not(:disabled) {
+  background: #5a252c;
+}
+
+.merge-confirm-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.merge-cancel-btn {
+  padding: 0.75rem 1.5rem;
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.merge-cancel-btn:hover:not(:disabled) {
+  background: #e0e0e0;
+}
+
 /* iOS Safari scroll fixes */
 textarea {
   -webkit-overflow-scrolling: touch;

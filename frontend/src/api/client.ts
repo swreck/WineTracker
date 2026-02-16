@@ -151,18 +151,51 @@ export const api = {
     request<Wine>(`/wines/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteWine: (id: number) =>
     request<{ success: boolean }>(`/wines/${id}`, { method: 'DELETE' }),
-  mergeWines: (targetId: number, sourceId: number) =>
+  previewMerge: (wine1Id: number, wine2Id: number) =>
+    request<{
+      wine1: { id: number; name: string };
+      wine2: { id: number; name: string };
+      wineConflicts: Array<{
+        field: string;
+        wine1Value: string | null;
+        wine2Value: string | null;
+      }>;
+      vintageConflicts: Array<{
+        vintageYear: number;
+        wine1VintageId: number;
+        wine2VintageId: number;
+        conflicts: Array<{
+          field: string;
+          wine1Value: string | null;
+          wine2Value: string | null;
+        }>;
+        wine1Tastings: number;
+        wine2Tastings: number;
+        wine1Purchases: number;
+        wine2Purchases: number;
+      }>;
+      wine1UniqueVintages: Array<{ year: number; tastings: number; purchases: number }>;
+      wine2UniqueVintages: Array<{ year: number; tastings: number; purchases: number }>;
+      hasConflicts: boolean;
+    }>(`/wines/${wine1Id}/merge/${wine2Id}/preview`),
+  mergeWines: (wine1Id: number, wine2Id: number, resolutions?: {
+    wineFields?: Record<string, 'wine1' | 'wine2'>;
+    vintages?: Record<string, Record<string, 'wine1' | 'wine2'>>;
+  }) =>
     request<{
       success: boolean;
-      targetWine: string;
-      sourceWine: string;
+      keptWine: string;
+      deletedWine: string;
       results: {
         vintagesMoved: number;
         vintagesMerged: number;
         tastingsMoved: number;
         purchaseItemsMoved: number;
       };
-    }>(`/wines/${targetId}/merge/${sourceId}`, { method: 'POST' }),
+    }>(`/wines/${wine1Id}/merge/${wine2Id}`, {
+      method: 'POST',
+      body: JSON.stringify({ resolutions })
+    }),
   getFavorites: (params?: { minRating?: number; color?: string }) => {
     return request<Wine[]>(`/wines/favorites/list${buildQuery(params)}`);
   },

@@ -272,25 +272,27 @@ router.delete('/:wineId/vintages/:vintageId', async (req: Request, res: Response
   }
 });
 
-// Merge two wines - moves all vintages, tastings, purchases from source to target
-router.post('/:targetId/merge/:sourceId', async (req: Request, res: Response) => {
+// Preview merge - shows conflicts that need resolution
+router.get('/:wine1Id/merge/:wine2Id/preview', async (req: Request, res: Response) => {
   const prisma: PrismaClient = req.app.locals.prisma;
-  const targetId = parseInt(req.params.targetId as string, 10);
-  const sourceId = parseInt(req.params.sourceId as string, 10);
-
-  if (targetId === sourceId) {
-    return res.status(400).json({ error: 'Cannot merge wine with itself' });
-  }
+  const wine1Id = parseInt(req.params.wine1Id as string, 10);
+  const wine2Id = parseInt(req.params.wine2Id as string, 10);
 
   try {
-    // Get both wines with their vintages
-    const [targetWine, sourceWine] = await Promise.all([
+    const [wine1, wine2] = await Promise.all([
       prisma.wine.findUnique({
-        where: { id: targetId },
-        include: { vintages: true },
+        where: { id: wine1Id },
+        include: {
+          vintages: {
+            include: {
+              tastingEvents: true,
+              purchaseItems: true,
+            },
+          },
+        },
       }),
       prisma.wine.findUnique({
-        where: { id: sourceId },
+        where: { id: wine2Id },
         include: {
           vintages: {
             include: {
@@ -302,11 +304,152 @@ router.post('/:targetId/merge/:sourceId', async (req: Request, res: Response) =>
       }),
     ]);
 
-    if (!targetWine) {
-      return res.status(404).json({ error: 'Target wine not found' });
+    if (!wine1 || !wine2) {
+      return res.status(404).json({ error: 'Wine not found' });
     }
-    if (!sourceWine) {
-      return res.status(404).json({ error: 'Source wine not found' });
+
+    // Find conflicts at wine level
+    const wineConflicts: Array<{
+      field: string;
+      wine1Value: string | null;
+      wine2Value: string | null;
+    }> = [];
+
+    const wineFields = ['name', 'color', 'region', 'appellation', 'grapeVarietyOrBlend'] as const;
+    for (const field of wineFields) {
+      const v1 = wine1[field];
+      const v2 = wine2[field];
+      if (v1 && v2 && v1 !== v2) {
+        wineConflicts.push({
+          field,
+          wine1Value: v1,
+          wine2Value: v2,
+        });
+      }
+    }
+
+    // Find vintage conflicts (same year in both wines)
+    const vintageConflicts: Array<{
+      vintageYear: number;
+      wine1VintageId: number;
+      wine2VintageId: number;
+      conflicts: Array<{
+        field: string;
+        wine1Value: string | null;
+        wine2Value: string | null;
+      }>;
+      wine1Tastings: number;
+      wine2Tastings: number;
+      wine1Purchases: number;
+      wine2Purchases: number;
+    }> = [];
+
+    for (const v1 of wine1.vintages) {
+      const v2 = wine2.vintages.find(v => v.vintageYear === v1.vintageYear);
+      if (v2) {
+        const conflicts: Array<{ field: string; wine1Value: string | null; wine2Value: string | null }> = [];
+
+        if (v1.sellerNotes && v2.sellerNotes && v1.sellerNotes !== v2.sellerNotes) {
+          conflicts.push({
+            field: 'sellerNotes',
+            wine1Value: v1.sellerNotes,
+            wine2Value: v2.sellerNotes,
+          });
+        }
+        if (v1.source && v2.source && v1.source !== v2.source) {
+          conflicts.push({
+            field: 'source',
+            wine1Value: v1.source + (v1.sourceCustom ? `: ${v1.sourceCustom}` : ''),
+            wine2Value: v2.source + (v2.sourceCustom ? `: ${v2.sourceCustom}` : ''),
+          });
+        }
+
+        vintageConflicts.push({
+          vintageYear: v1.vintageYear,
+          wine1VintageId: v1.id,
+          wine2VintageId: v2.id,
+          conflicts,
+          wine1Tastings: v1.tastingEvents.length,
+          wine2Tastings: v2.tastingEvents.length,
+          wine1Purchases: v1.purchaseItems.length,
+          wine2Purchases: v2.purchaseItems.length,
+        });
+      }
+    }
+
+    // Vintages unique to each wine
+    const wine1UniqueVintages = wine1.vintages
+      .filter(v => !wine2.vintages.some(v2 => v2.vintageYear === v.vintageYear))
+      .map(v => ({ year: v.vintageYear, tastings: v.tastingEvents.length, purchases: v.purchaseItems.length }));
+
+    const wine2UniqueVintages = wine2.vintages
+      .filter(v => !wine1.vintages.some(v1 => v1.vintageYear === v.vintageYear))
+      .map(v => ({ year: v.vintageYear, tastings: v.tastingEvents.length, purchases: v.purchaseItems.length }));
+
+    res.json({
+      wine1: { id: wine1.id, name: wine1.name },
+      wine2: { id: wine2.id, name: wine2.name },
+      wineConflicts,
+      vintageConflicts,
+      wine1UniqueVintages,
+      wine2UniqueVintages,
+      hasConflicts: wineConflicts.length > 0 || vintageConflicts.some(vc => vc.conflicts.length > 0),
+    });
+  } catch (error) {
+    console.error('Error previewing merge:', error);
+    res.status(500).json({ error: 'Failed to preview merge' });
+  }
+});
+
+// Merge two wines with conflict resolution
+// Body: { resolutions: { wineFields: { field: 'wine1' | 'wine2' }, vintages: { year: { field: 'wine1' | 'wine2' } } } }
+router.post('/:wine1Id/merge/:wine2Id', async (req: Request, res: Response) => {
+  const prisma: PrismaClient = req.app.locals.prisma;
+  const wine1Id = parseInt(req.params.wine1Id as string, 10);
+  const wine2Id = parseInt(req.params.wine2Id as string, 10);
+  const { resolutions } = req.body as {
+    resolutions?: {
+      wineFields?: Record<string, 'wine1' | 'wine2'>;
+      vintages?: Record<string, Record<string, 'wine1' | 'wine2'>>;
+    };
+  };
+
+  if (wine1Id === wine2Id) {
+    return res.status(400).json({ error: 'Cannot merge wine with itself' });
+  }
+
+  try {
+    // Get both wines with their vintages
+    const [wine1, wine2] = await Promise.all([
+      prisma.wine.findUnique({
+        where: { id: wine1Id },
+        include: {
+          vintages: {
+            include: {
+              tastingEvents: true,
+              purchaseItems: true,
+            },
+          },
+        },
+      }),
+      prisma.wine.findUnique({
+        where: { id: wine2Id },
+        include: {
+          vintages: {
+            include: {
+              tastingEvents: true,
+              purchaseItems: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    if (!wine1) {
+      return res.status(404).json({ error: 'First wine not found' });
+    }
+    if (!wine2) {
+      return res.status(404).json({ error: 'Second wine not found' });
     }
 
     const results = {
@@ -316,74 +459,111 @@ router.post('/:targetId/merge/:sourceId', async (req: Request, res: Response) =>
       purchaseItemsMoved: 0,
     };
 
-    // Process each vintage from source
-    for (const sourceVintage of sourceWine.vintages) {
-      // Check if target already has this vintage year
-      const existingTargetVintage = targetWine.vintages.find(
-        v => v.vintageYear === sourceVintage.vintageYear
-      );
+    // Determine final wine field values based on resolutions
+    const wineFieldResolutions = resolutions?.wineFields || {};
+    const finalWineData: Record<string, string | null> = {};
 
-      if (existingTargetVintage) {
-        // Merge into existing vintage
-        // Move tastings
-        await prisma.tastingEvent.updateMany({
-          where: { vintageId: sourceVintage.id },
-          data: { vintageId: existingTargetVintage.id },
-        });
-        results.tastingsMoved += sourceVintage.tastingEvents.length;
+    const wineFields = ['name', 'color', 'region', 'appellation', 'grapeVarietyOrBlend'] as const;
+    for (const field of wineFields) {
+      const choice = wineFieldResolutions[field];
+      if (choice === 'wine2') {
+        finalWineData[field] = wine2[field];
+      } else if (choice === 'wine1') {
+        finalWineData[field] = wine1[field];
+      } else {
+        // Default: use wine1's value if it has one, otherwise wine2's
+        finalWineData[field] = wine1[field] || wine2[field];
+      }
+    }
 
-        // Move purchase items
-        await prisma.purchaseItem.updateMany({
-          where: { vintageId: sourceVintage.id },
-          data: {
-            vintageId: existingTargetVintage.id,
-            wineId: targetId,
-          },
-        });
-        results.purchaseItemsMoved += sourceVintage.purchaseItems.length;
+    // Update wine1 with resolved values
+    await prisma.wine.update({
+      where: { id: wine1Id },
+      data: finalWineData as any,
+    });
 
-        // Merge seller notes if target doesn't have any
-        if (sourceVintage.sellerNotes && !existingTargetVintage.sellerNotes) {
-          await prisma.vintage.update({
-            where: { id: existingTargetVintage.id },
-            data: { sellerNotes: sourceVintage.sellerNotes },
-          });
+    // Process vintages
+    const vintageResolutions = resolutions?.vintages || {};
+
+    for (const v2 of wine2.vintages) {
+      const v1 = wine1.vintages.find(v => v.vintageYear === v2.vintageYear);
+
+      if (v1) {
+        // Same vintage year - merge with conflict resolution
+        const yearRes = vintageResolutions[String(v2.vintageYear)] || {};
+
+        // Determine seller notes
+        let sellerNotes = v1.sellerNotes;
+        if (yearRes.sellerNotes === 'wine2') {
+          sellerNotes = v2.sellerNotes;
+        } else if (!sellerNotes) {
+          sellerNotes = v2.sellerNotes;
         }
 
-        // Delete the now-empty source vintage
+        // Determine source
+        let source = v1.source;
+        let sourceCustom = v1.sourceCustom;
+        if (yearRes.source === 'wine2') {
+          source = v2.source;
+          sourceCustom = v2.sourceCustom;
+        } else if (!source) {
+          source = v2.source;
+          sourceCustom = v2.sourceCustom;
+        }
+
+        // Update v1 with resolved values
+        await prisma.vintage.update({
+          where: { id: v1.id },
+          data: { sellerNotes, source, sourceCustom },
+        });
+
+        // Move tastings from v2 to v1
+        await prisma.tastingEvent.updateMany({
+          where: { vintageId: v2.id },
+          data: { vintageId: v1.id },
+        });
+        results.tastingsMoved += v2.tastingEvents.length;
+
+        // Move purchase items from v2 to v1
+        await prisma.purchaseItem.updateMany({
+          where: { vintageId: v2.id },
+          data: { vintageId: v1.id, wineId: wine1Id },
+        });
+        results.purchaseItemsMoved += v2.purchaseItems.length;
+
+        // Delete the now-empty v2
         await prisma.vintage.delete({
-          where: { id: sourceVintage.id },
+          where: { id: v2.id },
         });
 
         results.vintagesMerged++;
       } else {
-        // Move entire vintage to target wine
+        // Unique vintage year - move to wine1
         await prisma.vintage.update({
-          where: { id: sourceVintage.id },
-          data: { wineId: targetId },
+          where: { id: v2.id },
+          data: { wineId: wine1Id },
         });
 
-        // Update purchase items to point to target wine
         await prisma.purchaseItem.updateMany({
-          where: { vintageId: sourceVintage.id },
-          data: { wineId: targetId },
+          where: { vintageId: v2.id },
+          data: { wineId: wine1Id },
         });
 
         results.vintagesMoved++;
-        results.tastingsMoved += sourceVintage.tastingEvents.length;
-        results.purchaseItemsMoved += sourceVintage.purchaseItems.length;
+        results.tastingsMoved += v2.tastingEvents.length;
+        results.purchaseItemsMoved += v2.purchaseItems.length;
       }
     }
 
-    // Delete the now-empty source wine
+    // Delete the now-empty wine2
     await prisma.wine.delete({
-      where: { id: sourceId },
+      where: { id: wine2Id },
     });
 
     res.json({
       success: true,
-      targetWine: targetWine.name,
-      sourceWine: sourceWine.name,
+      keptWine: wine1.name,
+      deletedWine: wine2.name,
       results,
     });
   } catch (error) {

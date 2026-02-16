@@ -56,8 +56,14 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
 
   // Merge state
   const [mergeSource, setMergeSource] = useState<Wine | null>(null);
+  const [mergeTarget, setMergeTarget] = useState<Wine | null>(null);
   const [mergeSearch, setMergeSearch] = useState('');
   const [merging, setMerging] = useState(false);
+  const [mergePreview, setMergePreview] = useState<Awaited<ReturnType<typeof api.previewMerge>> | null>(null);
+  const [mergeResolutions, setMergeResolutions] = useState<{
+    wineFields: Record<string, 'wine1' | 'wine2'>;
+    vintages: Record<string, Record<string, 'wine1' | 'wine2'>>;
+  }>({ wineFields: {}, vintages: {} });
 
   // Alphabetical jump state
   const [currentLetter, setCurrentLetter] = useState<string | undefined>();
@@ -226,21 +232,31 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
     setShowVintageFilter(false);
   }
 
-  async function handleMerge(targetWine: Wine) {
+  async function startMerge(targetWine: Wine) {
     if (!mergeSource || merging) return;
-
-    const confirmed = window.confirm(
-      `Merge "${mergeSource.name}" into "${targetWine.name}"?\n\n` +
-      `All vintages, tastings, and purchases from "${mergeSource.name}" ` +
-      `will be moved to "${targetWine.name}", and "${mergeSource.name}" will be deleted.`
-    );
-
-    if (!confirmed) return;
 
     try {
       setMerging(true);
-      await api.mergeWines(targetWine.id, mergeSource.id);
+      const preview = await api.previewMerge(mergeSource.id, targetWine.id);
+      setMergePreview(preview);
+      setMergeTarget(targetWine);
+      setMergeResolutions({ wineFields: {}, vintages: {} });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to preview merge');
+    } finally {
+      setMerging(false);
+    }
+  }
+
+  async function executeMerge() {
+    if (!mergeSource || !mergeTarget || merging) return;
+
+    try {
+      setMerging(true);
+      await api.mergeWines(mergeSource.id, mergeTarget.id, mergeResolutions);
       setMergeSource(null);
+      setMergeTarget(null);
+      setMergePreview(null);
       setMergeSearch('');
       await loadWines();
     } catch (e) {
@@ -248,6 +264,28 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
     } finally {
       setMerging(false);
     }
+  }
+
+  function setWineFieldResolution(field: string, choice: 'wine1' | 'wine2') {
+    setMergeResolutions(prev => ({
+      ...prev,
+      wineFields: { ...prev.wineFields, [field]: choice },
+    }));
+  }
+
+  function setVintageFieldResolution(year: string, field: string, choice: 'wine1' | 'wine2') {
+    setMergeResolutions(prev => ({
+      ...prev,
+      vintages: {
+        ...prev.vintages,
+        [year]: { ...prev.vintages[year], [field]: choice },
+      },
+    }));
+  }
+
+  function cancelMergePreview() {
+    setMergePreview(null);
+    setMergeTarget(null);
   }
 
   // Filter wines for merge search
@@ -506,8 +544,8 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
         {filteredAndSortedWines.length} of {wines.length} wines
       </div>
 
-      {/* Merge Modal */}
-      {mergeSource && (
+      {/* Merge Modal - Wine Selection */}
+      {mergeSource && !mergePreview && (
         <div className="merge-modal-overlay" onClick={() => setMergeSource(null)}>
           <div className="merge-modal" onClick={(e) => e.stopPropagation()}>
             <div className="merge-modal-header">
@@ -516,7 +554,7 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
             </div>
 
             <div className="merge-modal-body">
-              <p>Select which wine to merge into (this wine will be kept):</p>
+              <p>Select a wine to merge with:</p>
 
               {/* Quick merge with adjacent wines */}
               {(() => {
@@ -529,19 +567,19 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
                     {prevWine && (
                       <button
                         className="quick-merge-btn"
-                        onClick={() => handleMerge(prevWine)}
+                        onClick={() => startMerge(prevWine)}
                         disabled={merging}
                       >
-                        Merge into "{prevWine.name}" (above)
+                        "{prevWine.name}" (above)
                       </button>
                     )}
                     {nextWine && (
                       <button
                         className="quick-merge-btn"
-                        onClick={() => handleMerge(nextWine)}
+                        onClick={() => startMerge(nextWine)}
                         disabled={merging}
                       >
-                        Merge into "{nextWine.name}" (below)
+                        "{nextWine.name}" (below)
                       </button>
                     )}
                   </div>
@@ -563,7 +601,7 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
                       <button
                         key={w.id}
                         className="merge-search-result"
-                        onClick={() => handleMerge(w)}
+                        onClick={() => startMerge(w)}
                         disabled={merging}
                       >
                         {w.name}
@@ -578,7 +616,122 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
                 )}
               </div>
 
-              {merging && <div className="merging-indicator">Merging...</div>}
+              {merging && <div className="merging-indicator">Loading preview...</div>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Merge Modal - Preview and Conflict Resolution */}
+      {mergePreview && (
+        <div className="merge-modal-overlay" onClick={cancelMergePreview}>
+          <div className="merge-modal merge-preview-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="merge-modal-header">
+              <h3>Merge Preview</h3>
+              <button className="close-btn" onClick={cancelMergePreview}>×</button>
+            </div>
+
+            <div className="merge-modal-body">
+              <p className="merge-summary">
+                Merging <strong>"{mergePreview.wine1.name}"</strong> with <strong>"{mergePreview.wine2.name}"</strong>
+              </p>
+
+              {/* Wine-level conflicts */}
+              {mergePreview.wineConflicts.length > 0 && (
+                <div className="conflict-section">
+                  <h4>Wine Details - Choose which to keep:</h4>
+                  {mergePreview.wineConflicts.map((conflict) => (
+                    <div key={conflict.field} className="conflict-row">
+                      <span className="conflict-field">{conflict.field}:</span>
+                      <label className={`conflict-option ${mergeResolutions.wineFields[conflict.field] !== 'wine2' ? 'selected' : ''}`}>
+                        <input
+                          type="radio"
+                          name={`wine-${conflict.field}`}
+                          checked={mergeResolutions.wineFields[conflict.field] !== 'wine2'}
+                          onChange={() => setWineFieldResolution(conflict.field, 'wine1')}
+                        />
+                        {conflict.wine1Value}
+                      </label>
+                      <label className={`conflict-option ${mergeResolutions.wineFields[conflict.field] === 'wine2' ? 'selected' : ''}`}>
+                        <input
+                          type="radio"
+                          name={`wine-${conflict.field}`}
+                          checked={mergeResolutions.wineFields[conflict.field] === 'wine2'}
+                          onChange={() => setWineFieldResolution(conflict.field, 'wine2')}
+                        />
+                        {conflict.wine2Value}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Vintage conflicts */}
+              {mergePreview.vintageConflicts.filter(vc => vc.conflicts.length > 0).map((vc) => (
+                <div key={vc.vintageYear} className="conflict-section">
+                  <h4>{vc.vintageYear} Vintage - Choose which to keep:</h4>
+                  {vc.conflicts.map((conflict) => (
+                    <div key={conflict.field} className="conflict-row">
+                      <span className="conflict-field">{conflict.field === 'sellerNotes' ? 'Seller Notes' : 'Source'}:</span>
+                      <label className={`conflict-option ${mergeResolutions.vintages[String(vc.vintageYear)]?.[conflict.field] !== 'wine2' ? 'selected' : ''}`}>
+                        <input
+                          type="radio"
+                          name={`vintage-${vc.vintageYear}-${conflict.field}`}
+                          checked={mergeResolutions.vintages[String(vc.vintageYear)]?.[conflict.field] !== 'wine2'}
+                          onChange={() => setVintageFieldResolution(String(vc.vintageYear), conflict.field, 'wine1')}
+                        />
+                        <span className="conflict-value">{conflict.wine1Value}</span>
+                      </label>
+                      <label className={`conflict-option ${mergeResolutions.vintages[String(vc.vintageYear)]?.[conflict.field] === 'wine2' ? 'selected' : ''}`}>
+                        <input
+                          type="radio"
+                          name={`vintage-${vc.vintageYear}-${conflict.field}`}
+                          checked={mergeResolutions.vintages[String(vc.vintageYear)]?.[conflict.field] === 'wine2'}
+                          onChange={() => setVintageFieldResolution(String(vc.vintageYear), conflict.field, 'wine2')}
+                        />
+                        <span className="conflict-value">{conflict.wine2Value}</span>
+                      </label>
+                    </div>
+                  ))}
+                  <p className="merge-note">
+                    Tastings will be combined: {vc.wine1Tastings} + {vc.wine2Tastings} = {vc.wine1Tastings + vc.wine2Tastings}
+                  </p>
+                </div>
+              ))}
+
+              {/* Summary of what will be combined */}
+              {!mergePreview.hasConflicts && (
+                <p className="no-conflicts">No conflicts - data will be combined automatically.</p>
+              )}
+
+              {/* Unique vintages info */}
+              {(mergePreview.wine1UniqueVintages.length > 0 || mergePreview.wine2UniqueVintages.length > 0) && (
+                <div className="unique-vintages-info">
+                  {mergePreview.wine1UniqueVintages.length > 0 && (
+                    <p>Vintages from "{mergePreview.wine1.name}": {mergePreview.wine1UniqueVintages.map(v => v.year).join(', ')}</p>
+                  )}
+                  {mergePreview.wine2UniqueVintages.length > 0 && (
+                    <p>Vintages from "{mergePreview.wine2.name}": {mergePreview.wine2UniqueVintages.map(v => v.year).join(', ')}</p>
+                  )}
+                </div>
+              )}
+
+              <div className="merge-actions">
+                <button
+                  className="merge-confirm-btn"
+                  onClick={executeMerge}
+                  disabled={merging}
+                >
+                  {merging ? 'Merging...' : 'Confirm Merge'}
+                </button>
+                <button
+                  className="merge-cancel-btn"
+                  onClick={cancelMergePreview}
+                  disabled={merging}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
