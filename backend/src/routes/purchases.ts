@@ -3,6 +3,12 @@ import { PrismaClient } from '@prisma/client';
 
 const router = Router();
 
+// Parse date string as local date (avoiding timezone issues)
+function parseLocalDate(dateStr: string): Date {
+  // Append noon time to avoid timezone day shifts
+  return new Date(dateStr + 'T12:00:00');
+}
+
 // Get all purchase batches
 router.get('/', async (req: Request, res: Response) => {
   const prisma: PrismaClient = req.app.locals.prisma;
@@ -90,7 +96,7 @@ router.post('/items', async (req: Request, res: Response) => {
 
   try {
     // Create or find a purchase batch for this date
-    const date = purchaseDate ? new Date(purchaseDate) : new Date();
+    const date = purchaseDate ? parseLocalDate(purchaseDate) : new Date();
     let batch = await prisma.purchaseBatch.findFirst({
       where: {
         purchaseDate: {
@@ -103,7 +109,7 @@ router.post('/items', async (req: Request, res: Response) => {
     if (!batch) {
       batch = await prisma.purchaseBatch.create({
         data: {
-          purchaseDate: new Date(purchaseDate || Date.now()),
+          purchaseDate: purchaseDate ? parseLocalDate(purchaseDate) : new Date(),
         },
       });
     }
@@ -140,7 +146,7 @@ router.put('/batches/:id', async (req: Request, res: Response) => {
     const batch = await prisma.purchaseBatch.update({
       where: { id },
       data: {
-        ...(purchaseDate !== undefined && { purchaseDate: new Date(purchaseDate) }),
+        ...(purchaseDate !== undefined && { purchaseDate: parseLocalDate(purchaseDate) }),
         ...(theme !== undefined && { theme }),
       },
     });

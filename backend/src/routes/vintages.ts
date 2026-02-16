@@ -41,6 +41,50 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
+// Create vintage for existing wine
+router.post('/', async (req: Request, res: Response) => {
+  const prisma: PrismaClient = req.app.locals.prisma;
+  const { wineId, vintageYear, sellerNotes, source, sourceCustom } = req.body;
+
+  if (!wineId || !vintageYear) {
+    return res.status(400).json({ error: 'wineId and vintageYear are required' });
+  }
+
+  try {
+    // Check if wine exists
+    const wine = await prisma.wine.findUnique({ where: { id: wineId } });
+    if (!wine) {
+      return res.status(404).json({ error: 'Wine not found' });
+    }
+
+    // Check if vintage already exists
+    const existing = await prisma.vintage.findFirst({
+      where: { wineId, vintageYear },
+    });
+    if (existing) {
+      return res.status(400).json({ error: `Vintage ${vintageYear} already exists for this wine` });
+    }
+
+    const vintage = await prisma.vintage.create({
+      data: {
+        wineId,
+        vintageYear,
+        sellerNotes: sellerNotes || null,
+        source: source || null,
+        sourceCustom: sourceCustom || null,
+      },
+      include: {
+        wine: true,
+      },
+    });
+
+    res.status(201).json(vintage);
+  } catch (error) {
+    console.error('Error creating vintage:', error);
+    res.status(500).json({ error: 'Failed to create vintage' });
+  }
+});
+
 // Update vintage
 router.put('/:id', async (req: Request, res: Response) => {
   const prisma: PrismaClient = req.app.locals.prisma;

@@ -41,6 +41,10 @@ export default function WineDetail({ wineId, onBack, onSelectVintage, onNavigate
   });
   const [showRatingPicker, setShowRatingPicker] = useState(false);
 
+  // Add vintage state
+  const [addingVintage, setAddingVintage] = useState(false);
+  const [newVintageYear, setNewVintageYear] = useState<number>(new Date().getFullYear());
+
   // Rating options: <5, 5, 5.5, 6, ... 10
   const ratingOptions = [
     { value: 4, label: '<5' },
@@ -146,6 +150,25 @@ export default function WineDetail({ wineId, onBack, onSelectVintage, onNavigate
     }
   }
 
+  async function handleAddVintage() {
+    if (!newVintageYear) {
+      setError('Please enter a vintage year');
+      return;
+    }
+    try {
+      await api.createVintage({
+        wineId,
+        vintageYear: newVintageYear,
+      });
+      await loadWine();
+      setAddingVintage(false);
+      setNewVintageYear(new Date().getFullYear());
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to add vintage');
+    }
+  }
+
   if (loading) return <div className="loading">Loading wine...</div>;
   if (error) return <div className="error">{error}</div>;
   if (!wine) return <div className="error">Wine not found</div>;
@@ -243,7 +266,30 @@ export default function WineDetail({ wineId, onBack, onSelectVintage, onNavigate
         )}
       </div>
 
-      <h4>Vintages</h4>
+      <div className="vintages-header">
+        <h4>Vintages</h4>
+        <button className="add-vintage-btn" onClick={() => setAddingVintage(true)}>
+          + Add Vintage
+        </button>
+      </div>
+
+      {addingVintage && (
+        <div className="add-vintage-form">
+          <input
+            type="number"
+            value={newVintageYear}
+            onChange={(e) => setNewVintageYear(parseInt(e.target.value, 10) || 0)}
+            placeholder="Year"
+            min={1900}
+            max={2100}
+          />
+          <div className="form-actions">
+            <button onClick={handleAddVintage}>Add</button>
+            <button onClick={() => setAddingVintage(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
       {wine.vintages && wine.vintages.length > 0 ? (
         <div className="vintages-list">
           {wine.vintages.map((vintage) => {

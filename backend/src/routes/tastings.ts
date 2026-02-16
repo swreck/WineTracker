@@ -3,6 +3,12 @@ import { PrismaClient } from '@prisma/client';
 
 const router = Router();
 
+// Parse date string as local date (avoiding timezone issues)
+function parseLocalDate(dateStr: string): Date {
+  // Append noon time to avoid timezone day shifts
+  return new Date(dateStr + 'T12:00:00');
+}
+
 // Get all tasting events with optional filters
 router.get('/', async (req: Request, res: Response) => {
   const prisma: PrismaClient = req.app.locals.prisma;
@@ -53,7 +59,7 @@ router.post('/', async (req: Request, res: Response) => {
     const tasting = await prisma.tastingEvent.create({
       data: {
         vintageId,
-        tastingDate: tastingDate ? new Date(tastingDate) : null,
+        tastingDate: tastingDate ? parseLocalDate(tastingDate) : null,
         rating,
         notes,
       },
@@ -84,7 +90,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       data: {
         // null = clear the date, string = set new date, undefined = don't change
         ...(tastingDate !== undefined && {
-          tastingDate: tastingDate ? new Date(tastingDate) : null
+          tastingDate: tastingDate ? parseLocalDate(tastingDate) : null
         }),
         ...(rating !== undefined && { rating }),
         ...(notes !== undefined && { notes }),

@@ -555,6 +555,17 @@ export default function VintageDetail({ vintageId, onBack, fromWineId }: Props) 
                         value={editTasting.tastingDate}
                         onChange={(e) => setEditTasting({ ...editTasting, tastingDate: e.target.value })}
                       />
+                      {editTasting.tastingDate && (
+                        <button
+                          type="button"
+                          className="clear-date-btn"
+                          onClick={() => setEditTasting({ ...editTasting, tastingDate: '' })}
+                          title="Clear date"
+                        >
+                          ✕
+                        </button>
+                      )}
+                      <span className="date-hint">(optional)</span>
                     </div>
                     <button
                       className={`inline-rating-btn ${editTasting.rating ? 'has-rating' : ''}`}

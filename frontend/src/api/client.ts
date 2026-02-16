@@ -202,6 +202,8 @@ export const api = {
 
   // Vintages
   getVintage: (id: number) => request<Vintage>(`/vintages/${id}`),
+  createVintage: (data: { wineId: number; vintageYear: number; sellerNotes?: string; source?: WineSource; sourceCustom?: string }) =>
+    request<Vintage>('/vintages', { method: 'POST', body: JSON.stringify(data) }),
   updateVintage: (id: number, data: Partial<Vintage>) =>
     request<Vintage>(`/vintages/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteVintage: (wineId: number, vintageId: number) =>

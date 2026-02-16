@@ -310,6 +310,50 @@ tbody tr:hover {
   background: #f0f0f0;
 }
 
+/* Vintages header with add button */
+.vintages-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.vintages-header h4 {
+  margin: 0;
+}
+
+.add-vintage-btn {
+  padding: 0.35rem 0.75rem;
+  background: #722f37;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.add-vintage-btn:hover {
+  background: #8b3a42;
+}
+
+.add-vintage-form {
+  background: #f5f5f5;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.add-vintage-form input[type="number"] {
+  width: 100px;
+  padding: 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
 /* Expanded vintage card with inline tastings */
 .vintage-card-expanded {
   background: #f9f9f9;
@@ -1790,6 +1834,21 @@ th.sortable.active {
 .date-hint {
   font-size: 0.8rem;
   color: #888;
+}
+
+.clear-date-btn {
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.clear-date-btn:hover {
+  background: #e0e0e0;
+  color: #333;
 }
 
 /* Manual entry form additions */

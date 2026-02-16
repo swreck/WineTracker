@@ -4,6 +4,12 @@ import { withRetry } from '../utils/db';
 
 const router = Router();
 
+// Parse date string as local date (avoiding timezone issues)
+function parseLocalDate(dateStr: string): Date {
+  // Append noon time to avoid timezone day shifts
+  return new Date(dateStr + 'T12:00:00');
+}
+
 // Get all wines with optional filters
 router.get('/', async (req: Request, res: Response) => {
   const prisma: PrismaClient = req.app.locals.prisma;
@@ -181,7 +187,7 @@ router.post('/create-with-vintage', async (req: Request, res: Response) => {
     if (price || quantity > 0) {
       const purchaseBatch = await prisma.purchaseBatch.create({
         data: {
-          purchaseDate: purchaseDate ? new Date(purchaseDate) : new Date(),
+          purchaseDate: purchaseDate ? parseLocalDate(purchaseDate) : new Date(),
         },
       });
 
@@ -203,7 +209,7 @@ router.post('/create-with-vintage', async (req: Request, res: Response) => {
           vintageId: vintage.id,
           rating: tasting.rating,
           notes: tasting.notes || null,
-          tastingDate: tasting.tastingDate ? new Date(tasting.tastingDate) : null,
+          tastingDate: tasting.tastingDate ? parseLocalDate(tasting.tastingDate) : null,
         },
       });
       tastingCreated = true;
