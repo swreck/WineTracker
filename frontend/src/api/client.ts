@@ -248,8 +248,16 @@ export const api = {
     price?: number;
     quantity?: number;
     purchaseDate?: string;
+    sellerNotes?: string;
+    source?: WineSource;
+    sourceCustom?: string;
+    tasting?: {
+      rating: number;
+      notes?: string;
+      tastingDate?: string;
+    };
   }) =>
-    request<{ wineCreated: boolean; vintageCreated: boolean; wine: Wine; vintage: Vintage }>(
+    request<{ wineCreated: boolean; vintageCreated: boolean; tastingCreated?: boolean; wine: Wine; vintage: Vintage }>(
       '/wines/create-with-vintage',
       { method: 'POST', body: JSON.stringify(data) }
     ),

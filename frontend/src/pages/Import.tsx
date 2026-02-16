@@ -17,6 +17,12 @@ interface ManualEntry {
   price: string;
   quantity: number;
   purchaseDate: string;
+  sellerNotes: string;
+  source: '' | 'weimax' | 'costco' | 'other';
+  sourceCustom: string;
+  addTasting: boolean;
+  tastingRating: string;
+  tastingNotes: string;
 }
 
 const currentYear = new Date().getFullYear();
@@ -42,8 +48,30 @@ export default function Import({ onComplete }: Props) {
     price: '',
     quantity: 1,
     purchaseDate: new Date().toISOString().split('T')[0],
+    sellerNotes: '',
+    source: '',
+    sourceCustom: '',
+    addTasting: false,
+    tastingRating: '',
+    tastingNotes: '',
   });
   const [showOlderYears, setShowOlderYears] = useState(false);
+  const [showManualRatingPicker, setShowManualRatingPicker] = useState(false);
+
+  const ratingOptions = [
+    { value: 4, label: '<5' },
+    { value: 5, label: '5' },
+    { value: 5.5, label: '5.5' },
+    { value: 6, label: '6' },
+    { value: 6.5, label: '6.5' },
+    { value: 7, label: '7' },
+    { value: 7.5, label: '7.5' },
+    { value: 8, label: '8' },
+    { value: 8.5, label: '8.5' },
+    { value: 9, label: '9' },
+    { value: 9.5, label: '9.5' },
+    { value: 10, label: '10' },
+  ];
 
   async function handlePreview() {
     if (!text.trim()) {
@@ -88,6 +116,11 @@ export default function Import({ onComplete }: Props) {
       return;
     }
 
+    if (manualEntry.addTasting && !manualEntry.tastingRating) {
+      setError('Please select a rating for the tasting');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -100,6 +133,15 @@ export default function Import({ onComplete }: Props) {
         price: manualEntry.price ? parseFloat(manualEntry.price) : undefined,
         quantity: manualEntry.quantity,
         purchaseDate: manualEntry.purchaseDate,
+        sellerNotes: manualEntry.sellerNotes.trim() || undefined,
+        source: manualEntry.source || undefined,
+        sourceCustom: manualEntry.source === 'other' ? manualEntry.sourceCustom.trim() : undefined,
+        tasting: manualEntry.addTasting && manualEntry.tastingRating
+          ? {
+              rating: parseFloat(manualEntry.tastingRating),
+              notes: manualEntry.tastingNotes.trim() || undefined,
+            }
+          : undefined,
       });
 
       setResult({
@@ -109,9 +151,9 @@ export default function Import({ onComplete }: Props) {
           winesMatched: data.wineCreated ? 0 : 1,
           vintagesCreated: data.vintageCreated ? 1 : 0,
           vintagesMatched: data.vintageCreated ? 0 : 1,
-          purchaseBatchesCreated: 1,
-          purchaseItemsCreated: 1,
-          tastingsCreated: 0,
+          purchaseBatchesCreated: manualEntry.price || manualEntry.quantity > 0 ? 1 : 0,
+          purchaseItemsCreated: manualEntry.price || manualEntry.quantity > 0 ? 1 : 0,
+          tastingsCreated: data.tastingCreated ? 1 : 0,
         },
         ambiguities: [],
       });
@@ -170,6 +212,12 @@ export default function Import({ onComplete }: Props) {
               price: '',
               quantity: 1,
               purchaseDate: new Date().toISOString().split('T')[0],
+              sellerNotes: '',
+              source: '',
+              sourceCustom: '',
+              addTasting: false,
+              tastingRating: '',
+              tastingNotes: '',
             });
           }}>
             Add More
@@ -483,6 +531,75 @@ export default function Import({ onComplete }: Props) {
               onChange={(e) => setManualEntry({ ...manualEntry, purchaseDate: e.target.value })}
             />
           </div>
+
+          <div className="form-field">
+            <label>Source</label>
+            <select
+              value={manualEntry.source}
+              onChange={(e) => setManualEntry({ ...manualEntry, source: e.target.value as ManualEntry['source'] })}
+            >
+              <option value="">Not specified</option>
+              <option value="weimax">Weimax</option>
+              <option value="costco">Costco</option>
+              <option value="other">Other...</option>
+            </select>
+            {manualEntry.source === 'other' && (
+              <input
+                type="text"
+                placeholder="Enter source name"
+                value={manualEntry.sourceCustom}
+                onChange={(e) => setManualEntry({ ...manualEntry, sourceCustom: e.target.value })}
+                className="source-custom-input"
+              />
+            )}
+          </div>
+
+          <div className="form-field">
+            <label>Seller Notes</label>
+            <textarea
+              value={manualEntry.sellerNotes}
+              onChange={(e) => setManualEntry({ ...manualEntry, sellerNotes: e.target.value })}
+              placeholder="Wine description from seller (optional)"
+              rows={3}
+            />
+          </div>
+
+          <div className="form-field tasting-toggle">
+            <label>
+              <input
+                type="checkbox"
+                checked={manualEntry.addTasting}
+                onChange={(e) => setManualEntry({ ...manualEntry, addTasting: e.target.checked })}
+              />
+              Add a tasting note
+            </label>
+          </div>
+
+          {manualEntry.addTasting && (
+            <div className="tasting-fields">
+              <div className="form-field">
+                <label>Rating *</label>
+                <button
+                  type="button"
+                  className={`inline-rating-btn ${manualEntry.tastingRating ? 'has-rating' : ''}`}
+                  onClick={() => setShowManualRatingPicker(true)}
+                >
+                  {manualEntry.tastingRating
+                    ? ratingOptions.find(r => String(r.value) === manualEntry.tastingRating)?.label || manualEntry.tastingRating
+                    : 'Tap to rate'}
+                </button>
+              </div>
+              <div className="form-field">
+                <label>Tasting Notes</label>
+                <textarea
+                  value={manualEntry.tastingNotes}
+                  onChange={(e) => setManualEntry({ ...manualEntry, tastingNotes: e.target.value })}
+                  placeholder="Your tasting notes (optional)"
+                  rows={2}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {error && <div className="error">{error}</div>}
@@ -494,6 +611,29 @@ export default function Import({ onComplete }: Props) {
         >
           {loading ? 'Adding...' : 'Add Wine'}
         </button>
+
+        {/* Rating picker popup */}
+        {showManualRatingPicker && (
+          <div className="rating-popup-overlay" onClick={() => setShowManualRatingPicker(false)}>
+            <div className="rating-popup" onClick={(e) => e.stopPropagation()}>
+              <div className="rating-popup-header">Select Rating</div>
+              <div className="rating-options-grid">
+                {ratingOptions.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    className={`rating-option ${value < 6 ? 'low' : value >= 8 ? 'high' : 'mid'} ${manualEntry.tastingRating === String(value) ? 'selected' : ''}`}
+                    onClick={() => {
+                      setManualEntry({ ...manualEntry, tastingRating: String(value) });
+                      setShowManualRatingPicker(false);
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

@@ -120,11 +120,23 @@ router.post('/', async (req: Request, res: Response) => {
 // Create wine with vintage and optional purchase (manual entry)
 router.post('/create-with-vintage', async (req: Request, res: Response) => {
   const prisma: PrismaClient = req.app.locals.prisma;
-  const { name, color, vintageYear, price, quantity = 1, purchaseDate } = req.body;
+  const {
+    name,
+    color,
+    vintageYear,
+    price,
+    quantity = 1,
+    purchaseDate,
+    sellerNotes,
+    source,
+    sourceCustom,
+    tasting, // { rating, notes, tastingDate? }
+  } = req.body;
 
   try {
     let wineCreated = false;
     let vintageCreated = false;
+    let tastingCreated = false;
 
     // Find or create wine
     let wine = await prisma.wine.findFirst({
@@ -145,31 +157,62 @@ router.post('/create-with-vintage', async (req: Request, res: Response) => {
 
     if (!vintage) {
       vintage = await prisma.vintage.create({
-        data: { wineId: wine.id, vintageYear },
+        data: {
+          wineId: wine.id,
+          vintageYear,
+          sellerNotes: sellerNotes || null,
+          source: source || null,
+          sourceCustom: sourceCustom || null,
+        },
       });
       vintageCreated = true;
+    } else if (sellerNotes || source) {
+      // Update existing vintage with new info if provided
+      vintage = await prisma.vintage.update({
+        where: { id: vintage.id },
+        data: {
+          ...(sellerNotes && !vintage.sellerNotes && { sellerNotes }),
+          ...(source && !vintage.source && { source, sourceCustom }),
+        },
+      });
     }
 
-    // Create purchase batch and item
-    const purchaseBatch = await prisma.purchaseBatch.create({
-      data: {
-        purchaseDate: purchaseDate ? new Date(purchaseDate) : new Date(),
-      },
-    });
+    // Create purchase batch and item if price or quantity provided
+    if (price || quantity > 0) {
+      const purchaseBatch = await prisma.purchaseBatch.create({
+        data: {
+          purchaseDate: purchaseDate ? new Date(purchaseDate) : new Date(),
+        },
+      });
 
-    await prisma.purchaseItem.create({
-      data: {
-        purchaseBatchId: purchaseBatch.id,
-        wineId: wine.id,
-        vintageId: vintage.id,
-        pricePaid: price,
-        quantityPurchased: quantity,
-      },
-    });
+      await prisma.purchaseItem.create({
+        data: {
+          purchaseBatchId: purchaseBatch.id,
+          wineId: wine.id,
+          vintageId: vintage.id,
+          pricePaid: price || null,
+          quantityPurchased: quantity || 1,
+        },
+      });
+    }
+
+    // Create tasting if provided
+    if (tasting && tasting.rating) {
+      await prisma.tastingEvent.create({
+        data: {
+          vintageId: vintage.id,
+          rating: tasting.rating,
+          notes: tasting.notes || null,
+          tastingDate: tasting.tastingDate ? new Date(tasting.tastingDate) : null,
+        },
+      });
+      tastingCreated = true;
+    }
 
     res.status(201).json({
       wineCreated,
       vintageCreated,
+      tastingCreated,
       wine,
       vintage,
     });

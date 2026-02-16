@@ -1792,6 +1792,30 @@ th.sortable.active {
   color: #888;
 }
 
+/* Manual entry form additions */
+.source-custom-input {
+  margin-top: 0.5rem;
+}
+
+.tasting-toggle label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.tasting-toggle input[type="checkbox"] {
+  width: auto;
+}
+
+.tasting-fields {
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 0.5rem;
+}
+
 .inline-add-tasting input[type="date"] {
   flex: 1;
   padding: 0.5rem;
