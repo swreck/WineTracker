@@ -223,13 +223,13 @@ router.post('/execute', async (req: Request, res: Response) => {
           }
         }
 
-        // Create purchase item
+        // Create purchase item (round price to nearest dollar)
         await prisma.purchaseItem.create({
           data: {
             purchaseBatchId: purchaseBatch.id,
             wineId: wine.id,
             vintageId: vintage.id,
-            pricePaid: item.price,
+            pricePaid: item.price ? Math.round(item.price) : null,
             quantityPurchased: item.quantity,
           },
         });

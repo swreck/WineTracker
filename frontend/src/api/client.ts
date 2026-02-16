@@ -34,11 +34,15 @@ export interface Wine {
   tastingCount?: number;
 }
 
+export type WineSource = 'weimax' | 'costco' | 'other';
+
 export interface Vintage {
   id: number;
   wineId: number;
   vintageYear: number;
   sellerNotes?: string;
+  source?: WineSource;
+  sourceCustom?: string;
   createdAt: string;
   wine?: Wine;
   tastingEvents?: TastingEvent[];
@@ -194,6 +198,8 @@ export const api = {
     request<PurchaseItem>(`/purchases/items/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   createPurchaseItem: (data: { vintageId: number; wineId: number; pricePaid?: number; quantityPurchased?: number; purchaseDate?: string }) =>
     request<PurchaseItem>('/purchases/items', { method: 'POST', body: JSON.stringify(data) }),
+  updatePurchaseBatch: (id: number, data: { purchaseDate?: string; theme?: string }) =>
+    request<PurchaseBatch>(`/purchases/batches/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 
   // Import
   previewImport: (text: string, mode?: 'standard' | 'receipt' | 'label') =>

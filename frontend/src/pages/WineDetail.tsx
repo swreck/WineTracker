@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import type { Wine } from '../api/client';
+import { useNavigation } from '../context/NavigationContext';
 
 interface Props {
   wineId: number;
   onBack: () => void;
   onSelectVintage: (id: number) => void;
+  onNavigateWine?: (id: number) => void;
 }
 
 const colorLabels: Record<string, string> = {
@@ -15,12 +17,19 @@ const colorLabels: Record<string, string> = {
   sparkling: 'Sparkling',
 };
 
-export default function WineDetail({ wineId, onBack, onSelectVintage }: Props) {
+export default function WineDetail({ wineId, onBack, onSelectVintage, onNavigateWine }: Props) {
   const [wine, setWine] = useState<Wine | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<Wine>>({});
+
+  // Navigation context for Next/Previous
+  const { winesListState } = useNavigation();
+  const { filteredWineIds } = winesListState;
+  const currentIndex = filteredWineIds.indexOf(wineId);
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex >= 0 && currentIndex < filteredWineIds.length - 1;
 
   // Quick tasting state
   const [addingTastingForVintage, setAddingTastingForVintage] = useState<number | null>(null);
@@ -143,9 +152,34 @@ export default function WineDetail({ wineId, onBack, onSelectVintage }: Props) {
 
   return (
     <div className="wine-detail">
-      <button className="back-button" onClick={onBack}>
-        ← Back to Wines
-      </button>
+      <div className="wine-detail-nav">
+        <button className="back-button" onClick={onBack}>
+          ← Back to Wines
+        </button>
+        {onNavigateWine && (
+          <div className="wine-nav-arrows">
+            <button
+              className="nav-arrow"
+              disabled={!hasPrev}
+              onClick={() => hasPrev && onNavigateWine(filteredWineIds[currentIndex - 1])}
+              title="Previous wine"
+            >
+              ◀
+            </button>
+            {filteredWineIds.length > 0 && (
+              <span className="nav-position">{currentIndex + 1} of {filteredWineIds.length}</span>
+            )}
+            <button
+              className="nav-arrow"
+              disabled={!hasNext}
+              onClick={() => hasNext && onNavigateWine(filteredWineIds[currentIndex + 1])}
+              title="Next wine"
+            >
+              ▶
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className="wine-header">
         {editing ? (

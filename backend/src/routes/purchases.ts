@@ -130,4 +130,26 @@ router.post('/items', async (req: Request, res: Response) => {
   }
 });
 
+// Update a purchase batch (date, theme)
+router.put('/batches/:id', async (req: Request, res: Response) => {
+  const prisma: PrismaClient = req.app.locals.prisma;
+  const id = parseInt(req.params.id as string, 10);
+  const { purchaseDate, theme } = req.body;
+
+  try {
+    const batch = await prisma.purchaseBatch.update({
+      where: { id },
+      data: {
+        ...(purchaseDate !== undefined && { purchaseDate: new Date(purchaseDate) }),
+        ...(theme !== undefined && { theme }),
+      },
+    });
+
+    res.json(batch);
+  } catch (error) {
+    console.error('Error updating purchase batch:', error);
+    res.status(500).json({ error: 'Failed to update purchase batch' });
+  }
+});
+
 export default router;

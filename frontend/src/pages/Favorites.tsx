@@ -24,6 +24,7 @@ export default function Favorites({ onSelectWine, onSelectVintage }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [minRating, setMinRating] = useState(7);
   const [colorFilter, setColorFilter] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('');
 
   useEffect(() => {
     loadFavorites();
@@ -85,16 +86,27 @@ export default function Favorites({ onSelectWine, onSelectVintage }: Props) {
           </label>
 
           {mode === 'wines' && (
-            <select
-              value={colorFilter}
-              onChange={(e) => setColorFilter(e.target.value)}
-            >
-              <option value="">All Colors</option>
-              <option value="red">Red</option>
-              <option value="white">White</option>
-              <option value="rose">Rosé</option>
-              <option value="sparkling">Sparkling</option>
-            </select>
+            <>
+              <select
+                value={colorFilter}
+                onChange={(e) => setColorFilter(e.target.value)}
+              >
+                <option value="">All Colors</option>
+                <option value="red">Red</option>
+                <option value="white">White</option>
+                <option value="rose">Rosé</option>
+                <option value="sparkling">Sparkling</option>
+              </select>
+              <select
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value)}
+              >
+                <option value="">All Sources</option>
+                <option value="weimax">Weimax</option>
+                <option value="costco">Costco</option>
+                <option value="other">Other</option>
+              </select>
+            </>
           )}
         </div>
       </div>
@@ -102,9 +114,13 @@ export default function Favorites({ onSelectWine, onSelectVintage }: Props) {
       {loading && <div className="loading">Loading...</div>}
       {error && <div className="error">{error}</div>}
 
-      {!loading && !error && mode === 'wines' && (
+      {!loading && !error && mode === 'wines' && (() => {
+        const filteredWines = sourceFilter
+          ? wines.filter(w => w.vintages?.some(v => v.source === sourceFilter))
+          : wines;
+        return (
         <>
-          {wines.length === 0 ? (
+          {filteredWines.length === 0 ? (
             <div className="empty">
               No wines with rating ≥ {minRating}. Try lowering the threshold.
             </div>
@@ -120,7 +136,7 @@ export default function Favorites({ onSelectWine, onSelectVintage }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {wines.map((wine, i) => (
+                {filteredWines.map((wine, i) => (
                   <tr key={wine.id} onClick={() => onSelectWine(wine.id)}>
                     <td className="rank">{i + 1}</td>
                     <td>{wine.name}</td>
@@ -139,7 +155,8 @@ export default function Favorites({ onSelectWine, onSelectVintage }: Props) {
             </table>
           )}
         </>
-      )}
+        );
+      })()}
 
       {!loading && !error && mode === 'vintages' && (
         <>

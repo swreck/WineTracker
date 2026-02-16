@@ -1,6 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useLayoutEffect, useRef, useCallback } from 'react';
 import { api } from '../api/client';
 import type { Wine } from '../api/client';
+import { useNavigation } from '../context/NavigationContext';
+import { SearchWithHistory } from '../components/SearchWithHistory';
+import { AlphabeticalJump } from '../components/AlphabeticalJump';
 
 interface Props {
   onSelectWine: (id: number) => void;
@@ -21,17 +24,34 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
   const [wines, setWines] = useState<Wine[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [colorFilter, setColorFilter] = useState<string>('');
-  const [expandedWines, setExpandedWines] = useState<Set<number>>(new Set());
 
-  // Sorting state
-  const [sortField, setSortField] = useState<SortField>('name');
-  const [sortDir, setSortDir] = useState<SortDir>('asc');
+  // Use navigation context for filter state persistence
+  const {
+    winesListState,
+    updateWinesListState,
+    saveScrollPosition,
+    shouldRestoreScroll,
+    setShouldRestoreScroll
+  } = useNavigation();
 
-  // Vintage range filter
-  const [vintageMin, setVintageMin] = useState<string>('');
-  const [vintageMax, setVintageMax] = useState<string>('');
+  const { search, colorFilter, sourceFilter, sortField, sortDir, vintageMin, vintageMax, expandedWines } = winesListState;
+
+  // Local setter functions that update context
+  const setSearch = (value: string) => updateWinesListState({ search: value });
+  const setColorFilter = (value: string) => updateWinesListState({ colorFilter: value });
+  const setSourceFilter = (value: string) => updateWinesListState({ sourceFilter: value });
+  const setSortField = (value: SortField) => updateWinesListState({ sortField: value });
+  const setSortDir = (value: SortDir) => updateWinesListState({ sortDir: value });
+  const setVintageMin = (value: string) => updateWinesListState({ vintageMin: value });
+  const setVintageMax = (value: string) => updateWinesListState({ vintageMax: value });
+  const setExpandedWines = (value: Set<number> | ((prev: Set<number>) => Set<number>)) => {
+    if (typeof value === 'function') {
+      updateWinesListState({ expandedWines: value(expandedWines) });
+    } else {
+      updateWinesListState({ expandedWines: value });
+    }
+  };
+
   const [showVintageFilter, setShowVintageFilter] = useState(false);
 
   // Merge state
@@ -39,9 +59,29 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
   const [mergeSearch, setMergeSearch] = useState('');
   const [merging, setMerging] = useState(false);
 
+  // Alphabetical jump state
+  const [currentLetter, setCurrentLetter] = useState<string | undefined>();
+  const letterRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
+
+  const handleLetterClick = useCallback((letter: string) => {
+    const ref = letterRefs.current.get(letter);
+    if (ref) {
+      ref.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setCurrentLetter(letter);
+    }
+  }, []);
+
   useEffect(() => {
     loadWines();
   }, [colorFilter]);
+
+  // Restore scroll position when returning to this page
+  useLayoutEffect(() => {
+    if (shouldRestoreScroll && winesListState.scrollPosition > 0) {
+      window.scrollTo(0, winesListState.scrollPosition);
+      setShouldRestoreScroll(false);
+    }
+  }, [shouldRestoreScroll, winesListState.scrollPosition, setShouldRestoreScroll]);
 
   async function loadWines() {
     try {
@@ -107,6 +147,12 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
         if (!matches) return false;
       }
 
+      // Source filter - check if any vintage has matching source
+      if (sourceFilter) {
+        const hasSource = w.vintages?.some(v => v.source === sourceFilter);
+        if (!hasSource) return false;
+      }
+
       // Vintage range filter
       if (vintageMin || vintageMax) {
         const oldest = getOldestVintage(w);
@@ -154,7 +200,13 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
     });
 
     return result;
-  }, [wines, search, vintageMin, vintageMax, sortField, sortDir]);
+  }, [wines, search, sourceFilter, vintageMin, vintageMax, sortField, sortDir]);
+
+  // Store filtered wine IDs in context for Next/Previous navigation
+  useEffect(() => {
+    const ids = filteredAndSortedWines.map(w => w.id);
+    updateWinesListState({ filteredWineIds: ids });
+  }, [filteredAndSortedWines, updateWinesListState]);
 
   function toggleExpand(wineId: number) {
     setExpandedWines(prev => {
@@ -238,11 +290,10 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
   return (
     <div className="wines-list">
       <div className="filters">
-        <input
-          type="text"
-          placeholder="Search wines..."
+        <SearchWithHistory
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={setSearch}
+          placeholder="Search wines..."
           className="search-input"
         />
         <select
@@ -255,6 +306,16 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
           <option value="white">White</option>
           <option value="rose">Rosé</option>
           <option value="sparkling">Sparkling</option>
+        </select>
+        <select
+          value={sourceFilter}
+          onChange={(e) => setSourceFilter(e.target.value)}
+          className="source-filter"
+        >
+          <option value="">All Sources</option>
+          <option value="weimax">Weimax</option>
+          <option value="costco">Costco</option>
+          <option value="other">Other</option>
         </select>
         <button
           className={`vintage-filter-btn ${hasVintageFilter ? 'active' : ''}`}
@@ -327,10 +388,21 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
             </tr>
           </thead>
           <tbody>
-            {filteredAndSortedWines.map((wine) => {
+            {filteredAndSortedWines.map((wine, index) => {
               const hasMultipleVintages = wine.vintages && wine.vintages.length > 1;
               const isExpanded = expandedWines.has(wine.id);
               const latestPrice = getLatestPrice(wine);
+
+              // Track first wine of each letter for alphabetical jump
+              const firstLetter = wine.name.charAt(0).toUpperCase();
+              const normalizedLetter = /[A-Z]/.test(firstLetter) ? firstLetter : '#';
+              const prevLetter = index > 0
+                ? (() => {
+                    const prev = filteredAndSortedWines[index - 1].name.charAt(0).toUpperCase();
+                    return /[A-Z]/.test(prev) ? prev : '#';
+                  })()
+                : null;
+              const isFirstOfLetter = normalizedLetter !== prevLetter;
 
               const handleRowClick = (_e: React.MouseEvent) => {
                 // Allow text selection - don't navigate if user is selecting text
@@ -340,6 +412,7 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
                 if (hasMultipleVintages) {
                   toggleExpand(wine.id);
                 } else {
+                  saveScrollPosition();
                   onSelectWine(wine.id);
                 }
               };
@@ -348,6 +421,9 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
                 <>
                   <tr
                     key={wine.id}
+                    ref={isFirstOfLetter ? (el) => {
+                      if (el) letterRefs.current.set(normalizedLetter, el);
+                    } : undefined}
                     onClick={handleRowClick}
                     className={hasMultipleVintages ? 'expandable' : ''}
                   >
@@ -396,7 +472,10 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
                       <tr
                         key={`vintage-${vintage.id}`}
                         className="vintage-row"
-                        onClick={() => onSelectVintage(vintage.id, wine.id)}
+                        onClick={() => {
+                          saveScrollPosition();
+                          onSelectVintage(vintage.id, wine.id);
+                        }}
                       >
                         <td className="vintage-indent">↳ {vintage.vintageYear}</td>
                         <td></td>
@@ -499,6 +578,15 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Alphabetical Jump Selector */}
+      {filteredAndSortedWines.length > 10 && sortField === 'name' && (
+        <AlphabeticalJump
+          wines={filteredAndSortedWines}
+          onSelectLetter={handleLetterClick}
+          currentLetter={currentLetter}
+        />
       )}
     </div>
   );

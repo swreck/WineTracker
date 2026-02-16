@@ -73,8 +73,6 @@ const SKIP_PATTERNS = [
   /^\d+\s+TOTAL/i,  // "48 TOTAL"
   /^:\s*\d/,  // Lines starting with colon and number (orphaned tasting)
   /^ABOVE TO/i,  // "ABOVE TO SO CAL"
-  /^\d{1,2}\/\d{2,4}$/,  // Bare date like "6/25" or "4/25"
-  /^\d{1,2}\/\d{2}$/,  // Short date like "2/25"
 ];
 
 // Lines that are clearly descriptions, not wines

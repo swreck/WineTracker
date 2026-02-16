@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
-import type { Vintage } from '../api/client';
+import type { Vintage, WineSource } from '../api/client';
 
 interface Props {
   vintageId: number;
@@ -26,6 +26,44 @@ export default function VintageDetail({ vintageId, onBack, fromWineId }: Props) 
     pricePaid: '',
     quantity: '1',
   });
+
+  // Seller notes editing
+  const [editingSellerNotes, setEditingSellerNotes] = useState(false);
+  const [sellerNotesValue, setSellerNotesValue] = useState('');
+
+  // Source editing
+  const [editingSource, setEditingSource] = useState(false);
+  const [sourceValue, setSourceValue] = useState<WineSource | ''>('');
+  const [sourceCustomValue, setSourceCustomValue] = useState('');
+
+  // Purchase date editing
+  const [editingPurchaseDateId, setEditingPurchaseDateId] = useState<number | null>(null);
+  const [editPurchaseDateValue, setEditPurchaseDateValue] = useState('');
+
+  // Tasting editing
+  const [editingTastingId, setEditingTastingId] = useState<number | null>(null);
+  const [editTasting, setEditTasting] = useState({
+    tastingDate: '',
+    rating: '',
+    notes: '',
+  });
+
+  // Rating options for picker
+  const ratingOptions = [
+    { value: 4, label: '<5' },
+    { value: 5, label: '5' },
+    { value: 5.5, label: '5.5' },
+    { value: 6, label: '6' },
+    { value: 6.5, label: '6.5' },
+    { value: 7, label: '7' },
+    { value: 7.5, label: '7.5' },
+    { value: 8, label: '8' },
+    { value: 8.5, label: '8.5' },
+    { value: 9, label: '9' },
+    { value: 9.5, label: '9.5' },
+    { value: 10, label: '10' },
+  ];
+  const [showEditRatingPicker, setShowEditRatingPicker] = useState(false);
 
   useEffect(() => {
     loadVintage();
@@ -138,11 +176,102 @@ export default function VintageDetail({ vintageId, onBack, fromWineId }: Props) 
     setEditPriceValue(currentPrice ? String(currentPrice) : '');
   }
 
+  function startEditSellerNotes() {
+    setSellerNotesValue(vintage?.sellerNotes || '');
+    setEditingSellerNotes(true);
+  }
+
+  async function handleSaveSellerNotes() {
+    try {
+      await api.updateVintage(vintageId, { sellerNotes: sellerNotesValue || undefined });
+      await loadVintage();
+      setEditingSellerNotes(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update seller notes');
+    }
+  }
+
+  function startEditSource() {
+    setSourceValue(vintage?.source || '');
+    setSourceCustomValue(vintage?.sourceCustom || '');
+    setEditingSource(true);
+  }
+
+  async function handleSaveSource() {
+    try {
+      await api.updateVintage(vintageId, {
+        source: sourceValue || undefined,
+        sourceCustom: sourceValue === 'other' ? sourceCustomValue : undefined,
+      });
+      await loadVintage();
+      setEditingSource(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update source');
+    }
+  }
+
+  function getSourceLabel(source?: WineSource, custom?: string): string {
+    if (!source) return '';
+    if (source === 'other' && custom) return custom;
+    return source.charAt(0).toUpperCase() + source.slice(1);
+  }
+
+  function startEditPurchaseDate(batchId: number, currentDate: string) {
+    setEditingPurchaseDateId(batchId);
+    setEditPurchaseDateValue(currentDate.split('T')[0]);
+  }
+
+  async function handleSavePurchaseDate(batchId: number) {
+    try {
+      await api.updatePurchaseBatch(batchId, { purchaseDate: editPurchaseDateValue });
+      await loadVintage();
+      setEditingPurchaseDateId(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update purchase date');
+    }
+  }
+
+  function startEditTasting(tasting: { id: number; tastingDate: string; rating: number; notes?: string }) {
+    setEditingTastingId(tasting.id);
+    setEditTasting({
+      tastingDate: tasting.tastingDate.split('T')[0],
+      rating: String(tasting.rating),
+      notes: tasting.notes || '',
+    });
+  }
+
+  async function handleSaveTasting(id: number) {
+    if (!editTasting.rating) {
+      setError('Rating is required');
+      return;
+    }
+    try {
+      await api.updateTasting(id, {
+        tastingDate: editTasting.tastingDate,
+        rating: parseFloat(editTasting.rating),
+        notes: editTasting.notes || undefined,
+      });
+      await loadVintage();
+      setEditingTastingId(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update tasting');
+    }
+  }
+
+  function handleEditRatingSelect(value: number) {
+    setEditTasting({ ...editTasting, rating: String(value) });
+    setShowEditRatingPicker(false);
+  }
+
   if (loading) return <div className="loading">Loading vintage...</div>;
   if (error) return <div className="error">{error}</div>;
   if (!vintage) return <div className="error">Vintage not found</div>;
 
-  const formatDate = (date: string) => new Date(date).toLocaleDateString();
+  const formatDate = (date: string) => new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
 
   return (
     <div className="vintage-detail">
@@ -162,10 +291,94 @@ export default function VintageDetail({ vintageId, onBack, fromWineId }: Props) 
           </div>
         )}
 
-        {vintage.sellerNotes && (
+        {vintage.sellerNotes || editingSellerNotes ? (
           <div className="seller-notes">
-            <strong>Seller:</strong> {vintage.sellerNotes}
+            <strong>Seller:</strong>
+            {editingSellerNotes ? (
+              <div className="seller-notes-edit">
+                <textarea
+                  value={sellerNotesValue}
+                  onChange={(e) => setSellerNotesValue(e.target.value)}
+                  rows={3}
+                  placeholder="Enter seller notes..."
+                  autoFocus
+                />
+                <div className="edit-actions">
+                  <button onClick={handleSaveSellerNotes}>Save</button>
+                  <button onClick={() => setEditingSellerNotes(false)}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {' '}{vintage.sellerNotes}
+                <button
+                  className="edit-inline-btn"
+                  onClick={startEditSellerNotes}
+                  title="Edit seller notes"
+                >
+                  ✎
+                </button>
+              </>
+            )}
           </div>
+        ) : (
+          <button
+            className="add-seller-notes-btn"
+            onClick={startEditSellerNotes}
+          >
+            + Add seller notes
+          </button>
+        )}
+
+        {/* Source field */}
+        {vintage.source || editingSource ? (
+          <div className="source-field">
+            <strong>Source:</strong>
+            {editingSource ? (
+              <div className="source-edit">
+                <select
+                  value={sourceValue}
+                  onChange={(e) => setSourceValue(e.target.value as WineSource | '')}
+                  autoFocus
+                >
+                  <option value="">Not specified</option>
+                  <option value="weimax">Weimax</option>
+                  <option value="costco">Costco</option>
+                  <option value="other">Other...</option>
+                </select>
+                {sourceValue === 'other' && (
+                  <input
+                    type="text"
+                    placeholder="Enter source name..."
+                    value={sourceCustomValue}
+                    onChange={(e) => setSourceCustomValue(e.target.value)}
+                  />
+                )}
+                <div className="edit-actions">
+                  <button onClick={handleSaveSource}>Save</button>
+                  <button onClick={() => setEditingSource(false)}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {' '}{getSourceLabel(vintage.source, vintage.sourceCustom)}
+                <button
+                  className="edit-inline-btn"
+                  onClick={startEditSource}
+                  title="Edit source"
+                >
+                  ✎
+                </button>
+              </>
+            )}
+          </div>
+        ) : (
+          <button
+            className="add-source-btn"
+            onClick={startEditSource}
+          >
+            + Add source
+          </button>
         )}
 
         <button className="delete-button" onClick={handleDeleteVintage}>
@@ -213,7 +426,26 @@ export default function VintageDetail({ vintageId, onBack, fromWineId }: Props) 
           <ul>
             {vintage.purchaseItems.map((item) => (
               <li key={item.id} className="purchase-item">
-                <span>{formatDate(item.purchaseBatch?.purchaseDate || '')}</span>
+                {editingPurchaseDateId === item.purchaseBatch?.id ? (
+                  <span className="date-edit">
+                    <input
+                      type="date"
+                      value={editPurchaseDateValue}
+                      onChange={(e) => setEditPurchaseDateValue(e.target.value)}
+                      autoFocus
+                    />
+                    <button onClick={() => handleSavePurchaseDate(item.purchaseBatch!.id)}>✓</button>
+                    <button onClick={() => setEditingPurchaseDateId(null)}>✕</button>
+                  </span>
+                ) : (
+                  <span
+                    className="date-display clickable"
+                    onClick={() => item.purchaseBatch && startEditPurchaseDate(item.purchaseBatch.id, item.purchaseBatch.purchaseDate)}
+                    title="Click to edit date"
+                  >
+                    {formatDate(item.purchaseBatch?.purchaseDate || '')}
+                  </span>
+                )}
                 {editingPriceId === item.id ? (
                   <span className="price-edit">
                     $<input
@@ -287,22 +519,79 @@ export default function VintageDetail({ vintageId, onBack, fromWineId }: Props) 
           <div className="tastings-list">
             {vintage.tastingEvents.map((tasting) => (
               <div key={tasting.id} className="tasting-card">
-                <div className="tasting-header">
-                  <span className="tasting-date">{formatDate(tasting.tastingDate)}</span>
-                  <span className="rating">{Number(tasting.rating).toFixed(1)}</span>
-                  <button
-                    className="delete-button"
-                    onClick={() => handleDeleteTasting(tasting.id)}
-                  >
-                    ×
-                  </button>
-                </div>
-                {tasting.notes && <p className="tasting-notes">{tasting.notes}</p>}
+                {editingTastingId === tasting.id ? (
+                  <div className="edit-tasting-form">
+                    <div className="date-row">
+                      <input
+                        type="date"
+                        value={editTasting.tastingDate}
+                        onChange={(e) => setEditTasting({ ...editTasting, tastingDate: e.target.value })}
+                      />
+                    </div>
+                    <button
+                      className={`inline-rating-btn ${editTasting.rating ? 'has-rating' : ''}`}
+                      onClick={() => setShowEditRatingPicker(true)}
+                    >
+                      {editTasting.rating ? ratingOptions.find(r => String(r.value) === editTasting.rating)?.label || editTasting.rating : 'Tap to rate'}
+                    </button>
+                    <textarea
+                      value={editTasting.notes}
+                      onChange={(e) => setEditTasting({ ...editTasting, notes: e.target.value })}
+                      placeholder="Notes..."
+                      rows={2}
+                    />
+                    <div className="form-actions">
+                      <button onClick={() => handleSaveTasting(tasting.id)}>Save</button>
+                      <button onClick={() => setEditingTastingId(null)}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="tasting-header">
+                      <span className="tasting-date">{formatDate(tasting.tastingDate)}</span>
+                      <span className="rating">{Number(tasting.rating).toFixed(1)}</span>
+                      <button
+                        className="edit-inline-btn"
+                        onClick={() => startEditTasting(tasting)}
+                        title="Edit tasting"
+                      >
+                        ✎
+                      </button>
+                      <button
+                        className="delete-button"
+                        onClick={() => handleDeleteTasting(tasting.id)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    {tasting.notes && <p className="tasting-notes">{tasting.notes}</p>}
+                  </>
+                )}
               </div>
             ))}
           </div>
         ) : (
           <p className="empty">No tasting notes yet</p>
+        )}
+
+        {/* Rating picker popup for editing */}
+        {showEditRatingPicker && (
+          <div className="rating-popup-overlay" onClick={() => setShowEditRatingPicker(false)}>
+            <div className="rating-popup" onClick={(e) => e.stopPropagation()}>
+              <div className="rating-popup-header">Select Rating</div>
+              <div className="rating-options-grid">
+                {ratingOptions.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    className={`rating-option ${value < 6 ? 'low' : value >= 8 ? 'high' : 'mid'} ${editTasting.rating === String(value) ? 'selected' : ''}`}
+                    onClick={() => handleEditRatingSelect(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

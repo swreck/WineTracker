@@ -2136,3 +2136,307 @@ th.sortable.active {
   padding: 1rem;
   color: #666;
 }
+
+/* iOS Safari scroll fixes */
+textarea {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+}
+
+.notes-section textarea,
+.add-tasting-form textarea,
+.inline-add-tasting textarea {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: scroll;
+  max-height: 200px;
+}
+
+/* Edit inline button */
+.edit-inline-btn {
+  background: none;
+  border: none;
+  color: #722f37;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0 0.25rem;
+  margin-left: 0.5rem;
+  opacity: 0.6;
+}
+
+.edit-inline-btn:hover {
+  opacity: 1;
+}
+
+/* Seller notes edit */
+.seller-notes-edit {
+  margin-top: 0.5rem;
+}
+
+.seller-notes-edit textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+}
+
+.add-seller-notes-btn {
+  background: none;
+  border: 1px dashed #ccc;
+  color: #666;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.add-seller-notes-btn:hover {
+  border-color: #722f37;
+  color: #722f37;
+}
+
+/* Date editing */
+.date-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.date-edit input {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #722f37;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.date-edit button {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  padding: 0.25rem;
+  cursor: pointer;
+}
+
+.date-edit button:first-of-type {
+  color: #28a745;
+}
+
+.date-edit button:last-of-type {
+  color: #c00;
+}
+
+.date-display.clickable {
+  color: #722f37;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+.date-display.clickable:hover {
+  text-decoration-style: solid;
+}
+
+/* Edit tasting form */
+.edit-tasting-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.edit-tasting-form input[type="date"] {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+.edit-tasting-form textarea {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+/* Wine detail navigation */
+.wine-detail-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.wine-nav-arrows {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nav-arrow {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #722f37;
+}
+
+.nav-arrow:hover:not(:disabled) {
+  background: #e8e0e1;
+  border-color: #722f37;
+}
+
+.nav-arrow:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.nav-position {
+  font-size: 0.85rem;
+  color: #666;
+  min-width: 60px;
+  text-align: center;
+}
+
+/* Search with history */
+.search-with-history {
+  position: relative;
+  flex: 1;
+}
+
+.search-history-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 100;
+}
+
+.history-header {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #eee;
+}
+
+.history-item {
+  padding: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.history-item:hover {
+  background: #f5f5f5;
+}
+
+.history-icon {
+  color: #999;
+  font-size: 0.9rem;
+}
+
+/* Alphabetical jump selector */
+.alphabetical-jump {
+  position: fixed;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+  background: rgba(255,255,255,0.95);
+  padding: 4px 2px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  z-index: 50;
+}
+
+.jump-letter {
+  width: 22px;
+  height: 16px;
+  border: none;
+  background: none;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #722f37;
+  cursor: pointer;
+  padding: 0;
+  line-height: 16px;
+}
+
+.jump-letter:hover:not(.disabled) {
+  background: #f0e8e9;
+}
+
+.jump-letter.active {
+  background: #722f37;
+  color: white;
+  border-radius: 2px;
+}
+
+.jump-letter.disabled {
+  color: #ddd;
+  cursor: default;
+}
+
+/* Adjust wines-list to make room for jump selector */
+.wines-list {
+  padding-right: 30px;
+}
+
+/* Source field */
+.source-field {
+  margin: 0.5rem 0;
+  color: #666;
+}
+
+.source-edit {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.source-edit select,
+.source-edit input {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.add-source-btn {
+  background: none;
+  border: 1px dashed #ccc;
+  color: #666;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.add-source-btn:hover {
+  border-color: #722f37;
+  color: #722f37;
+}
+
+/* Source filter in wines list */
+.source-filter {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}

@@ -29,12 +29,20 @@ enum WineColor {
   sparkling
 }
 
+enum WineSource {
+  weimax
+  costco
+  other
+}
+
 model Vintage {
-  id           Int      @id @default(autoincrement())
-  wineId       Int      @map("wine_id")
-  vintageYear  Int      @map("vintage_year")
-  sellerNotes  String?  @map("seller_notes")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id           Int         @id @default(autoincrement())
+  wineId       Int         @map("wine_id")
+  vintageYear  Int         @map("vintage_year")
+  sellerNotes  String?     @map("seller_notes")
+  source       WineSource?
+  sourceCustom String?     @map("source_custom")
+  createdAt    DateTime    @default(now()) @map("created_at")
 
   wine          Wine           @relation(fields: [wineId], references: [id])
   tastingEvents TastingEvent[]

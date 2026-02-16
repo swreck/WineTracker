@@ -5,6 +5,7 @@ import VintageDetail from './pages/VintageDetail';
 import Import from './pages/Import';
 import Favorites from './pages/Favorites';
 import QuickTasting from './pages/QuickTasting';
+import { NavigationProvider } from './context/NavigationContext';
 import './App.css';
 
 type Page =
@@ -21,6 +22,7 @@ function App() {
   const navigate = (newPage: Page) => setPage(newPage);
 
   return (
+    <NavigationProvider>
     <div className="app">
       <header className="header">
         <h1 onClick={() => navigate({ type: 'wines' })}>Wine Tracker</h1>
@@ -64,6 +66,7 @@ function App() {
             wineId={page.id}
             onBack={() => navigate({ type: 'wines' })}
             onSelectVintage={(id) => navigate({ type: 'vintage', id, fromWineId: page.id })}
+            onNavigateWine={(id) => navigate({ type: 'wine', id })}
           />
         )}
         {page.type === 'vintage' && (
@@ -92,6 +95,7 @@ function App() {
         )}
       </main>
     </div>
+    </NavigationProvider>
   );
 }
 

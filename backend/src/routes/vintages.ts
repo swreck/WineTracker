@@ -45,14 +45,16 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
   const prisma: PrismaClient = req.app.locals.prisma;
   const id = req.params.id as string;
-  const { vintageYear, sellerNotes } = req.body;
+  const { vintageYear, sellerNotes, source, sourceCustom } = req.body;
 
   try {
     const vintage = await prisma.vintage.update({
       where: { id: parseInt(id, 10) },
       data: {
-        vintageYear,
-        sellerNotes,
+        ...(vintageYear !== undefined && { vintageYear }),
+        ...(sellerNotes !== undefined && { sellerNotes }),
+        ...(source !== undefined && { source }),
+        ...(sourceCustom !== undefined && { sourceCustom }),
       },
     });
     res.json(vintage);
