@@ -231,6 +231,8 @@ export const api = {
   getPurchase: (id: number) => request<PurchaseBatch>(`/purchases/${id}`),
   updatePurchaseItem: (id: number, data: { pricePaid?: number; quantityPurchased?: number }) =>
     request<PurchaseItem>(`/purchases/items/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deletePurchaseItem: (id: number) =>
+    request<void>(`/purchases/items/${id}`, { method: 'DELETE' }),
   createPurchaseItem: (data: { vintageId: number; wineId: number; pricePaid?: number; quantityPurchased?: number; purchaseDate?: string }) =>
     request<PurchaseItem>('/purchases/items', { method: 'POST', body: JSON.stringify(data) }),
   updatePurchaseBatch: (id: number, data: { purchaseDate?: string; theme?: string }) =>

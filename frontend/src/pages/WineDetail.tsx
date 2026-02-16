@@ -286,6 +286,16 @@ export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
     }
   }
 
+  async function handleDeletePurchase(itemId: number) {
+    if (!confirm('Delete this purchase record?')) return;
+    try {
+      await api.deletePurchaseItem(itemId);
+      await loadWine();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete purchase');
+    }
+  }
+
   // Tastings
   function startAddTasting(vintageId: number) {
     setAddingTastingForVintage(vintageId);
@@ -676,6 +686,13 @@ export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
                                 </span>
                               )}
                               {item.quantityPurchased > 1 && <span> × {item.quantityPurchased}</span>}
+                              <button
+                                className="delete-inline-btn"
+                                onClick={() => handleDeletePurchase(item.id)}
+                                title="Delete purchase"
+                              >
+                                ×
+                              </button>
                             </li>
                           ))}
                         </ul>

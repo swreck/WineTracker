@@ -136,6 +136,22 @@ router.post('/items', async (req: Request, res: Response) => {
   }
 });
 
+// Delete a purchase item
+router.delete('/items/:id', async (req: Request, res: Response) => {
+  const prisma: PrismaClient = req.app.locals.prisma;
+  const id = parseInt(req.params.id as string, 10);
+
+  try {
+    await prisma.purchaseItem.delete({
+      where: { id },
+    });
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting purchase item:', error);
+    res.status(500).json({ error: 'Failed to delete purchase item' });
+  }
+});
+
 // Update a purchase batch (date, theme)
 router.put('/batches/:id', async (req: Request, res: Response) => {
   const prisma: PrismaClient = req.app.locals.prisma;
