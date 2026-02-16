@@ -255,7 +255,7 @@ export default function VintageDetail({ vintageId, onBack, fromWineId }: Props) 
     }
     try {
       await api.updateTasting(id, {
-        tastingDate: editTasting.tastingDate,
+        tastingDate: editTasting.tastingDate || null,
         rating: parseFloat(editTasting.rating),
         notes: editTasting.notes || undefined,
       });

@@ -82,9 +82,12 @@ router.put('/:id', async (req: Request, res: Response) => {
     const tasting = await prisma.tastingEvent.update({
       where: { id: parseInt(id, 10) },
       data: {
-        tastingDate: tastingDate ? new Date(tastingDate) : undefined,
-        rating,
-        notes,
+        // null = clear the date, string = set new date, undefined = don't change
+        ...(tastingDate !== undefined && {
+          tastingDate: tastingDate ? new Date(tastingDate) : null
+        }),
+        ...(rating !== undefined && { rating }),
+        ...(notes !== undefined && { notes }),
       },
     });
     res.json(tasting);
