@@ -48,7 +48,8 @@
       "Bash(npx prisma migrate deploy:*)",
       "Bash(npx prisma db execute:*)",
       "Bash(xargs:*)",
-      "Bash(/usr/libexec/ApplicationFirewall/socketfilterfw:*)"
+      "Bash(/usr/libexec/ApplicationFirewall/socketfilterfw:*)",
+      "Bash(git config:*)"
     ]
   }
 }

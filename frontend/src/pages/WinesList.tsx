@@ -411,6 +411,10 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
 
                 if (hasMultipleVintages) {
                   toggleExpand(wine.id);
+                } else if (wine.vintages && wine.vintages.length === 1) {
+                  // Single vintage - go directly to vintage detail
+                  saveScrollPosition();
+                  onSelectVintage(wine.vintages[0].id, wine.id);
                 } else {
                   saveScrollPosition();
                   onSelectWine(wine.id);
