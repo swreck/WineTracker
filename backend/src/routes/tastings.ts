@@ -53,7 +53,7 @@ router.post('/', async (req: Request, res: Response) => {
     const tasting = await prisma.tastingEvent.create({
       data: {
         vintageId,
-        tastingDate: new Date(tastingDate),
+        tastingDate: tastingDate ? new Date(tastingDate) : null,
         rating,
         notes,
       },

@@ -79,10 +79,10 @@ model PurchaseItem {
 }
 
 model TastingEvent {
-  id          Int      @id @default(autoincrement())
-  vintageId   Int      @map("vintage_id")
-  tastingDate DateTime @map("tasting_date")
-  rating      Decimal  @db.Decimal(3, 1)
+  id          Int       @id @default(autoincrement())
+  vintageId   Int       @map("vintage_id")
+  tastingDate DateTime? @map("tasting_date")
+  rating      Decimal   @db.Decimal(3, 1)
   notes       String?
 
   vintage Vintage @relation(fields: [vintageId], references: [id])

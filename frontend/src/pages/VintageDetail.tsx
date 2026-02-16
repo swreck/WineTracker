@@ -231,10 +231,10 @@ export default function VintageDetail({ vintageId, onBack, fromWineId }: Props) 
     }
   }
 
-  function startEditTasting(tasting: { id: number; tastingDate: string; rating: number; notes?: string }) {
+  function startEditTasting(tasting: { id: number; tastingDate?: string | null; rating: number; notes?: string }) {
     setEditingTastingId(tasting.id);
     setEditTasting({
-      tastingDate: tasting.tastingDate.split('T')[0],
+      tastingDate: tasting.tastingDate ? tasting.tastingDate.split('T')[0] : '',
       rating: String(tasting.rating),
       notes: tasting.notes || '',
     });
@@ -548,7 +548,7 @@ export default function VintageDetail({ vintageId, onBack, fromWineId }: Props) 
                 ) : (
                   <>
                     <div className="tasting-header">
-                      <span className="tasting-date">{formatDate(tasting.tastingDate)}</span>
+                      <span className="tasting-date">{tasting.tastingDate ? formatDate(tasting.tastingDate) : '(no date)'}</span>
                       <span className="rating">{Number(tasting.rating).toFixed(1)}</span>
                       <button
                         className="edit-inline-btn"

@@ -54,7 +54,7 @@ export interface Vintage {
 export interface TastingEvent {
   id: number;
   vintageId: number;
-  tastingDate: string;
+  tastingDate?: string | null;
   rating: number;
   notes?: string;
   vintage?: Vintage;
@@ -217,7 +217,7 @@ export const api = {
   getRecentTastings: (limit: number = 5) => {
     return request<TastingEvent[]>(`/tastings?limit=${limit}`);
   },
-  createTasting: (data: { vintageId: number; tastingDate: string; rating: number; notes?: string }) =>
+  createTasting: (data: { vintageId: number; tastingDate?: string; rating: number; notes?: string }) =>
     request<TastingEvent>('/tastings', { method: 'POST', body: JSON.stringify(data) }),
   updateTasting: (id: number, data: Partial<TastingEvent>) =>
     request<TastingEvent>(`/tastings/${id}`, { method: 'PUT', body: JSON.stringify(data) }),

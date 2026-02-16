@@ -331,7 +331,7 @@ export default function WineDetail({ wineId, onBack, onSelectVintage, onNavigate
                     {vintage.tastingEvents.map((tasting) => (
                       <div key={tasting.id} className="inline-tasting">
                         <span className="tasting-date">
-                          {new Date(tasting.tastingDate).toLocaleDateString()}
+                          {tasting.tastingDate ? new Date(tasting.tastingDate).toLocaleDateString() : '(no date)'}
                         </span>
                         <span className="rating">{Number(tasting.rating).toFixed(1)}</span>
                         {tasting.notes && (

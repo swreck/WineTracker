@@ -12,7 +12,7 @@ interface Props {
 interface RecentWine {
   wine: Wine;
   vintage: Vintage;
-  lastTasted: string;
+  lastTasted?: string | null;
 }
 
 export default function QuickTasting({ onCancel, preselectedWine, preselectedVintage }: Props) {
