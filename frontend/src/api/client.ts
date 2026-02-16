@@ -40,7 +40,7 @@ export interface Vintage {
   id: number;
   wineId: number;
   vintageYear: number;
-  sellerNotes?: string;
+  sellerNotes?: string | null;
   source?: WineSource;
   sourceCustom?: string;
   createdAt: string;

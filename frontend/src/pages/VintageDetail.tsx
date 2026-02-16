@@ -191,7 +191,7 @@ export default function VintageDetail({ vintageId, onBack, fromWineId }: Props) 
 
   async function handleSaveSellerNotes() {
     try {
-      await api.updateVintage(vintageId, { sellerNotes: sellerNotesValue || undefined });
+      await api.updateVintage(vintageId, { sellerNotes: sellerNotesValue.trim() || null });
       await loadVintage();
       setEditingSellerNotes(false);
     } catch (e) {
