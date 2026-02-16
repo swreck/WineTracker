@@ -81,13 +81,16 @@ export default function WinesList({ onSelectWine, onSelectVintage }: Props) {
     loadWines();
   }, [colorFilter]);
 
-  // Restore scroll position when returning to this page
+  // Restore scroll position when returning to this page (after wines loaded)
   useLayoutEffect(() => {
-    if (shouldRestoreScroll && winesListState.scrollPosition > 0) {
-      window.scrollTo(0, winesListState.scrollPosition);
+    if (shouldRestoreScroll && winesListState.scrollPosition > 0 && !loading && wines.length > 0) {
+      // Small delay to ensure DOM has rendered
+      requestAnimationFrame(() => {
+        window.scrollTo(0, winesListState.scrollPosition);
+      });
       setShouldRestoreScroll(false);
     }
-  }, [shouldRestoreScroll, winesListState.scrollPosition, setShouldRestoreScroll]);
+  }, [shouldRestoreScroll, winesListState.scrollPosition, setShouldRestoreScroll, loading, wines.length]);
 
   async function loadWines() {
     try {
