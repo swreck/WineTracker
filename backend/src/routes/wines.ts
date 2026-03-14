@@ -246,7 +246,10 @@ router.put('/:id', async (req: Request, res: Response) => {
       },
     });
     res.json(wine);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'P2025') {
+      return res.status(404).json({ error: 'Wine not found' });
+    }
     console.error('Error updating wine:', error);
     res.status(500).json({ error: 'Failed to update wine' });
   }
@@ -281,13 +284,22 @@ router.delete('/:id', async (req: Request, res: Response) => {
       where: { wineId: id },
     });
 
+    // Check wine exists before deleting
+    const wine = await prisma.wine.findUnique({ where: { id } });
+    if (!wine) {
+      return res.status(404).json({ error: 'Wine not found' });
+    }
+
     // Delete the wine
     await prisma.wine.delete({
       where: { id },
     });
 
     res.json({ success: true, message: 'Wine and all related data deleted' });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'P2025') {
+      return res.status(404).json({ error: 'Wine not found' });
+    }
     console.error('Error deleting wine:', error);
     res.status(500).json({ error: 'Failed to delete wine' });
   }

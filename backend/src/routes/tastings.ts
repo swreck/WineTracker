@@ -56,6 +56,12 @@ router.post('/', async (req: Request, res: Response) => {
   const { vintageId, tastingDate, rating, notes } = req.body;
 
   try {
+    // Verify vintage exists
+    const vintage = await prisma.vintage.findUnique({ where: { id: vintageId } });
+    if (!vintage) {
+      return res.status(404).json({ error: 'Vintage not found' });
+    }
+
     const tasting = await prisma.tastingEvent.create({
       data: {
         vintageId,
@@ -97,7 +103,10 @@ router.put('/:id', async (req: Request, res: Response) => {
       },
     });
     res.json(tasting);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'P2025') {
+      return res.status(404).json({ error: 'Tasting not found' });
+    }
     console.error('Error updating tasting:', error);
     res.status(500).json({ error: 'Failed to update tasting' });
   }
@@ -113,7 +122,10 @@ router.delete('/:id', async (req: Request, res: Response) => {
       where: { id: parseInt(id, 10) },
     });
     res.status(204).send();
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'P2025') {
+      return res.status(404).json({ error: 'Tasting not found' });
+    }
     console.error('Error deleting tasting:', error);
     res.status(500).json({ error: 'Failed to delete tasting' });
   }
