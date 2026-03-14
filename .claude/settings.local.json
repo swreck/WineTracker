@@ -51,7 +51,31 @@
       "Bash(/usr/libexec/ApplicationFirewall/socketfilterfw:*)",
       "Bash(git config:*)",
       "Bash(grep:*)",
-      "Bash(brew list:*)"
+      "Bash(brew list:*)",
+      "Bash(cd /Users/kenrosen/Documents/Projects/WineTracker1/frontend && npx vite build 2>&1)",
+      "Bash(ps -p 4708 -o command= 2>&1)",
+      "Bash(VITE_API_URL=/api npm run build 2>&1)",
+      "Bash(cp -r /Users/kenrosen/Documents/Projects/WineTracker1/frontend/dist/* /Users/kenrosen/Documents/Projects/WineTracker1/backend/public/)",
+      "Bash(cd /Users/kenrosen/Documents/Projects/WineTracker1 && railway init 2>&1)",
+      "Bash(railway whoami:*)",
+      "Bash(railway --help 2>&1 | head -40)",
+      "Bash(railway init:*)",
+      "Bash(railway list:*)",
+      "Bash(cd /Users/kenrosen/Documents/Projects/WineTracker1 && railway link 2>&1)",
+      "Bash(cd /Users/kenrosen/Documents/Projects/WineTracker1 && railway link --help 2>&1)",
+      "Bash(railway link:*)",
+      "Bash(railway environment:*)",
+      "Bash(railway delete:*)",
+      "Bash(railway --version 2>&1)",
+      "Bash(railway upgrade:*)",
+      "Bash(railway status:*)",
+      "Bash(railway service:*)",
+      "Bash(railway add:*)",
+      "Bash(railway up:*)",
+      "Bash(railway logs:*)",
+      "Bash(railway variable:*)",
+      "Bash(railway deployment:*)",
+      "Bash(railway domain:*)"
     ]
   }
 }

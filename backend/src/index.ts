@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
 import { PrismaClient } from '@prisma/client';
 import winesRouter from './routes/wines';
 import vintagesRouter from './routes/vintages';
@@ -72,6 +73,18 @@ app.get('/api/db-test', async (req, res) => {
       meta: error.meta
     });
   }
+});
+
+// Serve frontend static files
+const publicPath = path.join(__dirname, '..', 'public');
+app.use(express.static(publicPath));
+
+// SPA fallback: serve index.html for non-API routes
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+  res.sendFile(path.join(publicPath, 'index.html'));
 });
 
 const PORT = process.env.PORT || 3001;

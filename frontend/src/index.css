@@ -1,17 +1,150 @@
+/* ===== DESIGN TOKENS ===== */
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color: #333;
-  background-color: #f5f5f5;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Colors - Light mode */
+  --color-primary: #7a2e3a;
+  --color-primary-hover: #934050;
+  --color-primary-active: #5e2230;
+  --color-primary-subtle: rgba(122, 46, 58, 0.08);
+
+  --color-danger: #d32f2f;
+  --color-danger-hover: #b71c1c;
+  --color-danger-subtle: rgba(211, 47, 47, 0.08);
+  --color-success: #2e7d32;
+  --color-success-subtle: rgba(46, 125, 50, 0.08);
+  --color-warning: #f57c00;
+  --color-warning-subtle: rgba(245, 124, 0, 0.06);
+
+  --color-bg: #f2f0ed;
+  --color-bg-elevated: #ffffff;
+  --color-bg-secondary: #f7f5f3;
+  --color-bg-tertiary: #ece9e5;
+
+  --color-text: #1c1917;
+  --color-text-secondary: #6b665e;
+  --color-text-tertiary: #9c968e;
+  --color-text-on-primary: #ffffff;
+
+  --color-separator: rgba(60, 50, 40, 0.12);
+  --color-separator-opaque: #e2ddd7;
+
+  /* Wine color badges */
+  --color-wine-red: #7a2e3a;
+  --color-wine-white-bg: #f5f0d0;
+  --color-wine-white-text: #6b5c00;
+  --color-wine-rose-bg: #fcd5dd;
+  --color-wine-rose-text: #9c2040;
+  --color-wine-sparkling-bg: #ede4d3;
+  --color-wine-sparkling-text: #6b5930;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-overlay: 0 8px 32px rgba(0, 0, 0, 0.2);
+
+  /* Typography */
+  --font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+
+  /* Spacing (8px grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
+  --transition-slow: 0.3s ease-out;
+
+  /* Safe areas */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* ===== DARK MODE ===== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-primary: #d4838e;
+    --color-primary-hover: #e0a0a9;
+    --color-primary-active: #c06a76;
+    --color-primary-subtle: rgba(212, 131, 142, 0.12);
+
+    --color-danger: #ef5350;
+    --color-danger-hover: #f44336;
+    --color-danger-subtle: rgba(239, 83, 80, 0.12);
+    --color-success: #66bb6a;
+    --color-success-subtle: rgba(102, 187, 106, 0.12);
+    --color-warning: #ffa726;
+    --color-warning-subtle: rgba(255, 167, 38, 0.1);
+
+    --color-bg: #0f0f0f;
+    --color-bg-elevated: #1c1c1e;
+    --color-bg-secondary: #2c2c2e;
+    --color-bg-tertiary: #3a3a3c;
+
+    --color-text: #f2efeb;
+    --color-text-secondary: #a8a29e;
+    --color-text-tertiary: #78716c;
+    --color-text-on-primary: #ffffff;
+
+    --color-separator: rgba(255, 255, 255, 0.1);
+    --color-separator-opaque: #3a3a3c;
+
+    --color-wine-red: #d4838e;
+    --color-wine-white-bg: #3d3820;
+    --color-wine-white-text: #e8dfa0;
+    --color-wine-rose-bg: #4a2030;
+    --color-wine-rose-text: #f0a0b8;
+    --color-wine-sparkling-bg: #3a3020;
+    --color-wine-sparkling-text: #d4c8a8;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+    --shadow-overlay: 0 8px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  meta[name="theme-color"] {
+    content: #1c1c1e;
+  }
+}
+
+/* ===== RESET & BASE ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  margin: 0;
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   min-width: 320px;
   min-height: 100vh;
 }
@@ -20,19 +153,79 @@ body {
   min-height: 100vh;
 }
 
-h1, h2, h3, h4 {
-  line-height: 1.2;
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  font-weight: 600;
 }
 
 button {
   font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-size: var(--font-size-base);
+  transition: all var(--transition-normal);
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: var(--font-size-md);
+  transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
 }
 
 a {
-  color: #722f37;
+  color: var(--color-primary);
   text-decoration: none;
+  transition: color var(--transition-fast);
 }
 
 a:hover {
   text-decoration: underline;
+}
+
+::selection {
+  background: var(--color-primary);
+  color: white;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
