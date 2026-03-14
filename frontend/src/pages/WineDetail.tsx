@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import type { Wine, Vintage, WineSource } from '../api/client';
 import { useNavigation } from '../context/NavigationContext';
+import AutoExpandTextarea from '../components/AutoExpandTextarea';
 
 interface Props {
   wineId: number;
@@ -72,6 +73,43 @@ export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
     notes: '',
   });
   const [showEditRatingPicker, setShowEditRatingPicker] = useState(false);
+
+  // Tell Me More state
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiText, setAiText] = useState<string | null>(null);
+  const [showVintagePicker, setShowVintagePicker] = useState(false);
+
+  async function handleTellMeMore(vintageYear?: number) {
+    if (!wine) return;
+    setShowVintagePicker(false);
+    setAiLoading(true);
+    setAiText(null);
+    try {
+      const { text } = await api.tellMeMore({
+        wineName: wine.name,
+        vintageYear,
+        color: wine.color,
+        region: wine.region || undefined,
+        appellation: wine.appellation || undefined,
+        grapeVarietyOrBlend: wine.grapeVarietyOrBlend || undefined,
+      });
+      setAiText(text);
+    } catch (e) {
+      setAiText('Sorry, I couldn\u2019t find information about this wine right now.');
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  function onTellMeMoreClick() {
+    if (!wine?.vintages || wine.vintages.length === 0) {
+      handleTellMeMore();
+    } else if (wine.vintages.length === 1) {
+      handleTellMeMore(wine.vintages[0].vintageYear);
+    } else {
+      setShowVintagePicker(true);
+    }
+  }
 
   // Rating options
   const ratingOptions = [
@@ -484,7 +522,39 @@ export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
               <button className="delete-button" onClick={handleDelete}>
                 Delete Wine
               </button>
+              <button className="tell-me-more-button" onClick={onTellMeMoreClick} disabled={aiLoading}>
+                {aiLoading ? 'Thinking...' : 'More...'}
+              </button>
             </div>
+            {showVintagePicker && wine.vintages && (
+              <div className="vintage-picker">
+                <span className="vintage-picker-label">Which vintage?</span>
+                <div className="vintage-picker-options">
+                  {wine.vintages.map(v => (
+                    <button
+                      key={v.id}
+                      className="vintage-picker-btn"
+                      onClick={() => handleTellMeMore(v.vintageYear)}
+                    >
+                      {v.vintageYear}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {aiLoading && (
+              <div className="ai-response-area">
+                <div className="ai-loading-spinner" />
+              </div>
+            )}
+            {aiText && !aiLoading && (
+              <div className="ai-response-area">
+                <button className="ai-dismiss" onClick={() => setAiText(null)} title="Dismiss">×</button>
+                {aiText.split('\n\n').map((paragraph, i) => (
+                  <p key={i} className="ai-paragraph">{paragraph}</p>
+                ))}
+              </div>
+            )}
           </>
         )}
       </div>
@@ -729,11 +799,10 @@ export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
                           >
                             {newTasting.rating !== null ? newTasting.ratingLabel : 'Tap to rate'}
                           </button>
-                          <textarea
+                          <AutoExpandTextarea
                             placeholder="Notes (optional)"
                             value={newTasting.notes}
                             onChange={(e) => setNewTasting({ ...newTasting, notes: e.target.value })}
-                            rows={2}
                           />
                           <div className="form-actions">
                             <button onClick={handleAddTasting}>Save</button>
@@ -790,11 +859,10 @@ export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
                                   >
                                     {editTasting.rating ? ratingOptions.find(r => String(r.value) === editTasting.rating)?.label || editTasting.rating : 'Tap to rate'}
                                   </button>
-                                  <textarea
+                                  <AutoExpandTextarea
                                     value={editTasting.notes}
                                     onChange={(e) => setEditTasting({ ...editTasting, notes: e.target.value })}
                                     placeholder="Notes..."
-                                    rows={2}
                                   />
                                   <div className="form-actions">
                                     <button onClick={() => handleSaveTasting(tasting.id)}>Save</button>
@@ -840,6 +908,21 @@ export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
                     </div>
 
                     <div className="vintage-actions">
+                      <label className="not-available-toggle">
+                        <input
+                          type="checkbox"
+                          checked={vintage.notAvailable || false}
+                          onChange={async (e) => {
+                            try {
+                              await api.updateVintage(vintage.id, { notAvailable: e.target.checked } as any);
+                              await loadWine();
+                            } catch (err) {
+                              setError(err instanceof Error ? err.message : 'Failed to update');
+                            }
+                          }}
+                        />
+                        Not available
+                      </label>
                       <button className="delete-button small" onClick={() => handleDeleteVintage(vintage)}>
                         Delete Vintage
                       </button>

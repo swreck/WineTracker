@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import type { Wine, Vintage } from '../api/client';
+import AutoExpandTextarea from '../components/AutoExpandTextarea';
 
 interface Props {
   onCancel: () => void;
@@ -318,11 +319,10 @@ export default function QuickTasting({ onCancel, preselectedWine, preselectedVin
         </button>
       ) : (
         <div className="notes-section">
-          <textarea
+          <AutoExpandTextarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Tasting notes..."
-            rows={2}
             autoFocus
           />
         </div>

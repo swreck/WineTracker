@@ -26,6 +26,7 @@ export default function Favorites({ onSelectWine }: Props) {
   const [sourceFilter, setSourceFilter] = useState('');
   const [vintageMin, setVintageMin] = useState('');
   const [vintageMax, setVintageMax] = useState('');
+  const [availableOnly, setAvailableOnly] = useState(false);
 
   // Generate year options for vintage filter
   const currentYear = new Date().getFullYear();
@@ -36,7 +37,7 @@ export default function Favorites({ onSelectWine }: Props) {
 
   useEffect(() => {
     loadFavorites();
-  }, [mode, minRating, colorFilter]);
+  }, [mode, minRating, colorFilter, availableOnly]);
 
   async function loadFavorites() {
     try {
@@ -47,10 +48,11 @@ export default function Favorites({ onSelectWine }: Props) {
         const data = await api.getFavorites({
           minRating,
           color: colorFilter || undefined,
+          availableOnly: availableOnly ? 'true' : undefined,
         });
         setWines(data);
       } else {
-        const data = await api.getVintageFavorites({ minRating });
+        const data = await api.getVintageFavorites({ minRating, availableOnly: availableOnly ? 'true' : undefined });
         setVintages(data);
       }
     } catch (e) {
@@ -138,6 +140,14 @@ export default function Favorites({ onSelectWine }: Props) {
               ))}
             </select>
           </div>
+          <label className={`available-only-toggle ${availableOnly ? 'active' : ''}`}>
+            <input
+              type="checkbox"
+              checked={availableOnly}
+              onChange={(e) => setAvailableOnly(e.target.checked)}
+            />
+            Available only
+          </label>
         </div>
       </div>
 
@@ -171,9 +181,9 @@ export default function Favorites({ onSelectWine }: Props) {
                 <tr>
                   <th>#</th>
                   <th>Wine</th>
-                  <th>Color</th>
                   <th>Avg Rating</th>
                   <th>Tastings</th>
+                  <th>Color</th>
                 </tr>
               </thead>
               <tbody>
@@ -182,14 +192,14 @@ export default function Favorites({ onSelectWine }: Props) {
                     <td className="rank">{i + 1}</td>
                     <td>{wine.name}</td>
                     <td>
+                      <span className="rating">{wine.averageRating?.toFixed(1)}</span>
+                    </td>
+                    <td>{wine.tastingCount}</td>
+                    <td>
                       <span className={`color-badge ${wine.color}`}>
                         {colorLabels[wine.color]}
                       </span>
                     </td>
-                    <td>
-                      <span className="rating">{wine.averageRating?.toFixed(1)}</span>
-                    </td>
-                    <td>{wine.tastingCount}</td>
                   </tr>
                 ))}
               </tbody>

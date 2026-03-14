@@ -43,6 +43,7 @@ export interface Vintage {
   sellerNotes?: string | null;
   source?: WineSource;
   sourceCustom?: string;
+  notAvailable?: boolean;
   createdAt: string;
   wine?: Wine;
   tastingEvents?: TastingEvent[];
@@ -143,7 +144,7 @@ function buildQuery(params?: Record<string, string | number | undefined>): strin
 
 export const api = {
   // Wines
-  getWines: (params?: { color?: string; search?: string }) => {
+  getWines: (params?: { color?: string; search?: string; availableOnly?: string }) => {
     return request<Wine[]>(`/wines${buildQuery(params)}`);
   },
   getWine: (id: number) => request<Wine>(`/wines/${id}`),
@@ -196,7 +197,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ resolutions })
     }),
-  getFavorites: (params?: { minRating?: number; color?: string }) => {
+  getFavorites: (params?: { minRating?: number; color?: string; availableOnly?: string }) => {
     return request<Wine[]>(`/wines/favorites/list${buildQuery(params)}`);
   },
 
@@ -208,7 +209,7 @@ export const api = {
     request<Vintage>(`/vintages/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteVintage: (wineId: number, vintageId: number) =>
     request<{ success: boolean }>(`/wines/${wineId}/vintages/${vintageId}`, { method: 'DELETE' }),
-  getVintageFavorites: (params?: { minRating?: number }) => {
+  getVintageFavorites: (params?: { minRating?: number; availableOnly?: string }) => {
     return request<Vintage[]>(`/vintages/favorites/list${buildQuery(params)}`);
   },
 
@@ -243,6 +244,10 @@ export const api = {
     request<ImportPreview>('/import/preview', { method: 'POST', body: JSON.stringify({ text, mode }) }),
   executeImport: (text: string, mode?: 'standard' | 'receipt' | 'label', matchDecisions?: Record<string, number | null>) =>
     request<ImportResult>('/import/execute', { method: 'POST', body: JSON.stringify({ text, mode, matchDecisions }) }),
+
+  // AI
+  tellMeMore: (data: { wineName: string; vintageYear?: number; color?: string; region?: string; appellation?: string; grapeVarietyOrBlend?: string }) =>
+    request<{ text: string }>('/ai/tell-me-more', { method: 'POST', body: JSON.stringify(data) }),
 
   // Manual wine entry
   createWineWithVintage: (data: {

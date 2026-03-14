@@ -62,6 +62,19 @@ export function SearchWithHistory({ value, onChange, placeholder, className }: P
         onKeyDown={handleKeyDown}
         className={className || "search-input"}
       />
+      {value && (
+        <button
+          className="search-clear-btn"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onChange('');
+            inputRef.current?.focus();
+          }}
+          aria-label="Clear search"
+        >
+          ✕
+        </button>
+      )}
       {showHistory && history.length > 0 && !value && (
         <div className="search-history-dropdown">
           <div className="history-header">Recent searches</div>

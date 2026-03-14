@@ -42,6 +42,7 @@ model Vintage {
   sellerNotes  String?     @map("seller_notes")
   source       WineSource?
   sourceCustom String?     @map("source_custom")
+  notAvailable Boolean     @default(false) @map("not_available")
   createdAt    DateTime    @default(now()) @map("created_at")
 
   wine          Wine           @relation(fields: [wineId], references: [id])

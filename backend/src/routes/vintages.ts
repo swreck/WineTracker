@@ -89,7 +89,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
   const prisma: PrismaClient = req.app.locals.prisma;
   const id = req.params.id as string;
-  const { vintageYear, sellerNotes, source, sourceCustom } = req.body;
+  const { vintageYear, sellerNotes, source, sourceCustom, notAvailable } = req.body;
 
   try {
     const vintage = await prisma.vintage.update({
@@ -99,6 +99,7 @@ router.put('/:id', async (req: Request, res: Response) => {
         ...(sellerNotes !== undefined && { sellerNotes }),
         ...(source !== undefined && { source }),
         ...(sourceCustom !== undefined && { sourceCustom }),
+        ...(notAvailable !== undefined && { notAvailable }),
       },
     });
     res.json(vintage);
@@ -111,7 +112,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 // Get favorites at vintage level
 router.get('/favorites/list', async (req: Request, res: Response) => {
   const prisma: PrismaClient = req.app.locals.prisma;
-  const { minRating = 7, limit = 20 } = req.query;
+  const { minRating = 7, limit = 20, availableOnly } = req.query;
 
   try {
     const vintages = await prisma.vintage.findMany({
@@ -135,6 +136,7 @@ router.get('/favorites/list', async (req: Request, res: Response) => {
         };
       })
       .filter(v => v.averageRating && v.averageRating >= Number(minRating))
+      .filter(v => availableOnly !== 'true' || !v.notAvailable)
       .sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0))
       .slice(0, Number(limit));
 

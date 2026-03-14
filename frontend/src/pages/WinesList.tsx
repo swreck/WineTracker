@@ -52,6 +52,7 @@ export default function WinesList({ onSelectWine }: Props) {
   };
 
   const [showVintageFilter, setShowVintageFilter] = useState(false);
+  const [availableOnly, setAvailableOnly] = useState(false);
 
   // Merge state
   const [mergeSource, setMergeSource] = useState<Wine | null>(null);
@@ -78,7 +79,7 @@ export default function WinesList({ onSelectWine }: Props) {
 
   useEffect(() => {
     loadWines();
-  }, [colorFilter]);
+  }, [colorFilter, availableOnly]);
 
   // Restore scroll position when returning to this page (after wines loaded)
   useLayoutEffect(() => {
@@ -94,7 +95,7 @@ export default function WinesList({ onSelectWine }: Props) {
   async function loadWines() {
     try {
       setLoading(true);
-      const data = await api.getWines({ color: colorFilter || undefined });
+      const data = await api.getWines({ color: colorFilter || undefined, availableOnly: availableOnly ? 'true' : undefined });
       setWines(data);
       setError(null);
     } catch (e) {
@@ -365,6 +366,14 @@ export default function WinesList({ onSelectWine }: Props) {
             ? `${vintageMin || 'Any'} - ${vintageMax || 'Any'}`
             : 'Vintages'}
         </button>
+        <label className={`available-only-toggle ${availableOnly ? 'active' : ''}`}>
+          <input
+            type="checkbox"
+            checked={availableOnly}
+            onChange={(e) => setAvailableOnly(e.target.checked)}
+          />
+          Available only
+        </label>
       </div>
 
       {showVintageFilter && (
@@ -420,10 +429,10 @@ export default function WinesList({ onSelectWine }: Props) {
             <tr>
               <SortHeader field="name" label="Wine" />
               <SortHeader field="vintage" label="Vintage" />
-              <th>Color</th>
               <SortHeader field="price" label="Price" />
               <SortHeader field="rating" label="Rating" />
               <SortHeader field="tastings" label="Tastings" />
+              <th>Color</th>
               <th className="actions-col"></th>
             </tr>
           </thead>
@@ -475,11 +484,6 @@ export default function WinesList({ onSelectWine }: Props) {
                       <span className="wine-name">{wine.name}</span>
                     </td>
                     <td>{getVintageYears(wine)}</td>
-                    <td>
-                      <span className={`color-badge ${wine.color}`}>
-                        {colorLabels[wine.color]}
-                      </span>
-                    </td>
                     <td>{latestPrice ? `$${latestPrice}` : '-'}</td>
                     <td>
                       {wine.averageRating ? (
@@ -489,6 +493,11 @@ export default function WinesList({ onSelectWine }: Props) {
                       )}
                     </td>
                     <td>{wine.tastingCount || 0}</td>
+                    <td>
+                      <span className={`color-badge ${wine.color}`}>
+                        {colorLabels[wine.color]}
+                      </span>
+                    </td>
                     <td className="actions-cell">
                       <button
                         className="merge-btn"
@@ -520,7 +529,6 @@ export default function WinesList({ onSelectWine }: Props) {
                       >
                         <td className="vintage-indent">↳ {vintage.vintageYear}</td>
                         <td></td>
-                        <td></td>
                         <td>{vintagePrice ? `$${Number(vintagePrice)}` : '-'}</td>
                         <td>
                           {avgRating ? (
@@ -528,6 +536,7 @@ export default function WinesList({ onSelectWine }: Props) {
                           ) : '-'}
                         </td>
                         <td>{vintage.tastingEvents?.length || 0}</td>
+                        <td></td>
                         <td></td>
                       </tr>
                     );

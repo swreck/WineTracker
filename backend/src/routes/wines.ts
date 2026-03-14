@@ -13,7 +13,7 @@ function parseLocalDate(dateStr: string): Date {
 // Get all wines with optional filters
 router.get('/', async (req: Request, res: Response) => {
   const prisma: PrismaClient = req.app.locals.prisma;
-  const { color, search, sortBy = 'createdAt', order = 'desc' } = req.query;
+  const { color, search, sortBy = 'createdAt', order = 'desc', availableOnly } = req.query;
 
   try {
     const where: any = {};
@@ -58,7 +58,12 @@ router.get('/', async (req: Request, res: Response) => {
       };
     });
 
-    res.json(winesWithRatings);
+    // Filter out wines where ALL vintages are notAvailable
+    const finalWines = availableOnly === 'true'
+      ? winesWithRatings.filter(w => w.vintages.some(v => !v.notAvailable))
+      : winesWithRatings;
+
+    res.json(finalWines);
   } catch (error) {
     console.error('Error fetching wines:', error);
     res.status(500).json({ error: 'Failed to fetch wines' });
@@ -636,7 +641,7 @@ router.post('/:wine1Id/merge/:wine2Id', async (req: Request, res: Response) => {
 // Get favorites (highest rated wines)
 router.get('/favorites/list', async (req: Request, res: Response) => {
   const prisma: PrismaClient = req.app.locals.prisma;
-  const { minRating = 7, color, limit = 20 } = req.query;
+  const { minRating = 7, color, limit = 20, availableOnly } = req.query;
 
   try {
     const wines = await prisma.wine.findMany({
@@ -669,7 +674,12 @@ router.get('/favorites/list', async (req: Request, res: Response) => {
       .sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0))
       .slice(0, Number(limit));
 
-    res.json(winesWithRatings);
+    // Filter out wines where ALL vintages are notAvailable
+    const finalWines = availableOnly === 'true'
+      ? winesWithRatings.filter(w => w.vintages.some(v => !v.notAvailable))
+      : winesWithRatings;
+
+    res.json(finalWines);
   } catch (error) {
     console.error('Error fetching favorites:', error);
     res.status(500).json({ error: 'Failed to fetch favorites' });
