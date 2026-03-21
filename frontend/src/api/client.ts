@@ -246,6 +246,9 @@ export const api = {
   executeImport: (text: string, mode?: 'standard' | 'receipt' | 'label', matchDecisions?: Record<string, number | null>, editedBatches?: any[]) =>
     request<ImportResult>('/import/execute', { method: 'POST', body: JSON.stringify({ text: editedBatches ? undefined : text, mode, matchDecisions, editedBatches }) }),
 
+  scanLabel: (image: string, mediaType: string) =>
+    request<ImportPreview>('/import/scan-label', { method: 'POST', body: JSON.stringify({ image, mediaType }) }),
+
   saveCorrections: (corrections: { fieldName: string; wrongValue: string; correctValue: string; originalText?: string }[], mode: string) =>
     request<{ success: boolean }>('/import/corrections', { method: 'POST', body: JSON.stringify({ corrections, mode }) }),
 

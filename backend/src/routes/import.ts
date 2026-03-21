@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { parseText } from '../parser/parser';
-import { aiParseLabel, aiParseReceipt } from '../parser/ai-parser';
+import { aiParseLabel, aiParseLabelImage, aiParseReceipt } from '../parser/ai-parser';
 import { findPotentialMatches, normalizeWineName, shouldAutoMatch, PotentialMatch } from '../utils/fuzzy';
 
 const router = Router();
@@ -353,6 +353,66 @@ router.post('/corrections', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error saving corrections:', error);
     res.status(500).json({ error: 'Failed to save corrections' });
+  }
+});
+
+// Label image scanning - accepts base64 image, returns parsed wine data
+router.post('/scan-label', async (req: Request, res: Response) => {
+  const prisma: PrismaClient = req.app.locals.prisma;
+  const { image, mediaType } = req.body;
+
+  if (!image || typeof image !== 'string') {
+    return res.status(400).json({ error: 'Base64 image data is required' });
+  }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: 'AI service not configured' });
+  }
+
+  const resolvedMediaType = mediaType || 'image/jpeg';
+
+  try {
+    const result = await aiParseLabelImage(image, resolvedMediaType, apiKey, prisma);
+
+    // Get existing wines for fuzzy matching
+    const existingWines = await prisma.wine.findMany({
+      select: { id: true, name: true }
+    });
+
+    const potentialMatches: any[] = [];
+    for (const batch of result.batches) {
+      for (const item of (batch.items || [])) {
+        const exactMatch = existingWines.find(
+          w => w.name.toLowerCase() === item.name.toLowerCase()
+        );
+        if (!exactMatch) {
+          const matches = findPotentialMatches(item.name, existingWines);
+          const needsAttention = matches.filter(m => !shouldAutoMatch(m));
+          if (needsAttention.length > 0) {
+            potentialMatches.push({
+              importedName: item.name,
+              matches: needsAttention.slice(0, 3),
+            });
+          }
+        }
+      }
+    }
+
+    res.json({
+      ...result,
+      potentialMatches,
+      summary: {
+        batchCount: result.batches.length,
+        itemCount: result.batches.reduce((sum, b) => sum + (b.items?.length || 0), 0),
+        tastingCount: 0,
+        ambiguityCount: result.ambiguities.length,
+        potentialMatchCount: potentialMatches.length,
+      },
+    });
+  } catch (error) {
+    console.error('Error scanning label:', error);
+    res.status(500).json({ error: 'Failed to scan label image' });
   }
 });
 

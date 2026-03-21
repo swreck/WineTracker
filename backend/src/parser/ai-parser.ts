@@ -36,6 +36,82 @@ async function getCorrections(prisma: PrismaClient, mode: string): Promise<strin
   return `\nPast corrections to learn from (apply similar logic to new inputs):\n${lines.join('\n')}`;
 }
 
+export async function aiParseLabelImage(imageBase64: string, mediaType: string, apiKey: string, prisma: PrismaClient): Promise<AIParseResult> {
+  const corrections = await getCorrections(prisma, 'label');
+  const client = new Anthropic({ apiKey });
+
+  const message = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 1000,
+    messages: [{
+      role: 'user',
+      content: [
+        {
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+            data: imageBase64,
+          },
+        },
+        {
+          type: 'text',
+          text: `This is a photo of a wine bottle label. Extract the wine information.
+
+Rules:
+- Extract: wine name (producer + wine/cuvée if applicable), vintage year, color (red/white/rose/sparkling), region/appellation
+- The wine name should be how a wine enthusiast would refer to this wine — proper capitalization, producer name included
+- If you recognize the appellation (e.g., Chablis = white, Margaux = red, Champagne = sparkling), use that for color
+- Ignore: decorative elements, legal text, alcohol %, "contains sulfites," barcodes, importer info
+- There is NO price, NO seller notes, NO purchase date on a bottle label — never invent these
+- If you cannot determine vintage year, use null
+${corrections}
+
+Respond with ONLY valid JSON, no markdown, no explanation:
+{
+  "name": "Producer Name - Wine Name",
+  "color": "red|white|rose|sparkling",
+  "vintageYear": 2023,
+  "region": "Region/Appellation or null"
+}`,
+        },
+      ],
+    }],
+  });
+
+  const content = message.content[0];
+  const responseText = content.type === 'text' ? content.text : '';
+
+  try {
+    const parsed = JSON.parse(responseText);
+    return {
+      batches: [{
+        purchaseDate: null,
+        items: [{
+          name: parsed.name || 'Unknown Wine',
+          color: parsed.color || 'red',
+          vintageYear: parsed.vintageYear || 0,
+          quantity: 1,
+        }],
+      }],
+      ambiguities: parsed.vintageYear ? [] : [{
+        type: 'vintage_parse',
+        message: 'Could not determine vintage year from label photo',
+        context: 'image',
+      }],
+    };
+  } catch {
+    return {
+      batches: [],
+      ambiguities: [{
+        type: 'vintage_parse',
+        message: 'Failed to parse label from photo',
+        context: responseText.slice(0, 100),
+      }],
+    };
+  }
+}
+
 export async function aiParseLabel(text: string, apiKey: string, prisma: PrismaClient): Promise<AIParseResult> {
   const corrections = await getCorrections(prisma, 'label');
   const client = new Anthropic({ apiKey });

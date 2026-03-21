@@ -77,6 +77,43 @@ export default function Import({ onComplete }: Props) {
   // Whether to navigate to tasting after import
   const [goToTasting, setGoToTasting] = useState(false);
 
+  // Label photo scanning
+  const [labelImage, setLabelImage] = useState<string | null>(null);
+  const [labelMediaType, setLabelMediaType] = useState<string>('image/jpeg');
+
+  function handlePhotoCapture(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLabelMediaType(file.type || 'image/jpeg');
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      // Strip the data:image/...;base64, prefix
+      const base64 = dataUrl.split(',')[1];
+      setLabelImage(base64);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function handleScanLabel() {
+    if (!labelImage) return;
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await api.scanLabel(labelImage, labelMediaType);
+      setPreview(data);
+      const cloned = JSON.parse(JSON.stringify(data.batches));
+      setEditedBatches(cloned);
+      setOriginalBatches(JSON.parse(JSON.stringify(data.batches)));
+      setMatchDecisions({});
+      setStage('preview');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to scan label');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const ratingOptions = [
     { value: 4, label: '<5' },
     { value: 5, label: '5' },
@@ -909,46 +946,104 @@ export default function Import({ onComplete }: Props) {
 
       {mode === 'label' && (
         <>
-          <p>Paste OCR text from a wine bottle label photo.</p>
-          <ul className="format-hints">
-            <li>AI-powered — handles noisy OCR, logos, decorative text</li>
-            <li>Recognizes appellations, grape varieties, producers</li>
-          </ul>
-          <p className="hint">Tip: Take a photo with your camera app, use built-in text recognition, then paste here.</p>
-        </>
-      )}
+          <p>Take a photo of a wine label or pick one from your library.</p>
 
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder={
-          mode === 'receipt'
-            ? `Paste receipt OCR here...
+          <div className="label-scan-area">
+            {labelImage ? (
+              <div className="label-preview">
+                <img src={`data:${labelMediaType};base64,${labelImage}`} alt="Wine label" className="label-preview-img" />
+                <button
+                  className="label-clear-btn"
+                  onClick={() => { setLabelImage(null); }}
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <label className="label-capture-btn">
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handlePhotoCapture}
+                  style={{ display: 'none' }}
+                />
+                <span className="camera-icon">📷</span>
+                <span>Take Photo</span>
+              </label>
+            )}
 
-Example:
-14248 PINTAS CHARACTER 2019
-2 @ 39.99        S        79.98 T
-FROM 30 YEAR OLD VINES, A TOP DOURO VALLEY BLEND.`
-            : `Paste label OCR here...
+            <label className="label-library-btn">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoCapture}
+                style={{ display: 'none' }}
+              />
+              Choose from Library
+            </label>
+          </div>
+
+          {error && <div className="error">{error}</div>}
+
+          <button
+            className="primary-button"
+            onClick={handleScanLabel}
+            disabled={loading || !labelImage}
+          >
+            {loading ? 'Scanning...' : 'Scan Label'}
+          </button>
+
+          <details className="text-fallback">
+            <summary>Or paste text instead</summary>
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={`Paste label OCR here...
 
 Example:
 CHABLIS
 APPELLATION CHABLIS CONTRÔLÉE
 RÉCOLTE 2023
-MICHEL GAYOT`
-        }
-        rows={12}
-      />
+MICHEL GAYOT`}
+              rows={6}
+            />
+            <button
+              className="secondary-button"
+              onClick={handlePreview}
+              disabled={loading || !text.trim()}
+            >
+              {loading ? 'Parsing...' : 'Preview Text'}
+            </button>
+          </details>
+        </>
+      )}
 
-      {error && <div className="error">{error}</div>}
+      {mode === 'receipt' && (
+        <>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={`Paste receipt OCR here...
 
-      <button
-        className="primary-button"
-        onClick={handlePreview}
-        disabled={loading}
-      >
-        {loading ? 'Parsing...' : 'Preview Import'}
-      </button>
+Example:
+14248 PINTAS CHARACTER 2019
+2 @ 39.99        S        79.98 T
+FROM 30 YEAR OLD VINES, A TOP DOURO VALLEY BLEND.`}
+            rows={12}
+          />
+
+          {error && <div className="error">{error}</div>}
+
+          <button
+            className="primary-button"
+            onClick={handlePreview}
+            disabled={loading}
+          >
+            {loading ? 'Parsing...' : 'Preview Import'}
+          </button>
+        </>
+      )}
     </div>
   );
 }
