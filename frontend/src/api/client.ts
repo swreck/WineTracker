@@ -130,6 +130,7 @@ export interface ImportResult {
     purchaseItemsCreated: number;
     tastingsCreated: number;
   };
+  importedWineIds?: number[];
   ambiguities: any[];
 }
 
@@ -242,8 +243,11 @@ export const api = {
   // Import
   previewImport: (text: string, mode?: 'standard' | 'receipt' | 'label') =>
     request<ImportPreview>('/import/preview', { method: 'POST', body: JSON.stringify({ text, mode }) }),
-  executeImport: (text: string, mode?: 'standard' | 'receipt' | 'label', matchDecisions?: Record<string, number | null>) =>
-    request<ImportResult>('/import/execute', { method: 'POST', body: JSON.stringify({ text, mode, matchDecisions }) }),
+  executeImport: (text: string, mode?: 'standard' | 'receipt' | 'label', matchDecisions?: Record<string, number | null>, editedBatches?: any[]) =>
+    request<ImportResult>('/import/execute', { method: 'POST', body: JSON.stringify({ text: editedBatches ? undefined : text, mode, matchDecisions, editedBatches }) }),
+
+  saveCorrections: (corrections: { fieldName: string; wrongValue: string; correctValue: string; originalText?: string }[], mode: string) =>
+    request<{ success: boolean }>('/import/corrections', { method: 'POST', body: JSON.stringify({ corrections, mode }) }),
 
   // AI
   tellMeMore: (data: { wineName: string; vintageYear?: number; color?: string; region?: string; appellation?: string; grapeVarietyOrBlend?: string }) =>

@@ -2,7 +2,25 @@
 
 ## What this is
 
-A personal PWA for tracking wines, vintages, tastings, and purchases. Simple data-management app — no AI, no background jobs.
+A personal PWA for tracking wines, vintages, tastings, and purchases. Simple data-management app with AI-powered import parsing.
+
+## Product Intent
+
+**Why this exists:** Ken buys wine regularly from stores like Weimax and Costco. He wants to remember what he bought, what he paid, and what he thought of each wine over time. Before this app, that information lived in scattered notes and receipts.
+
+**Core workflow:** Buy wine → snap a photo of the receipt → paste OCR text into the app → parser extracts wine names, vintages, prices → review/edit → confirm. Later, open a bottle → add a tasting note with a rating. Over time, build a personal database of preferences.
+
+**Key design decisions:**
+- Mobile-first — this is used standing in a wine store or at a dinner table, not at a desk
+- Import-heavy — most data enters via receipt/label OCR parsing, not manual typing
+- AI parsing with learning — the parser uses Anthropic (Haiku) to clean up messy OCR, and corrections feed back into future parsing
+- Ratings are 4.0–9.0 scale in 0.5 steps — Ken's personal scale, not a universal standard
+- Wine → Vintage → Tasting hierarchy — same wine can have multiple vintages, each with multiple tasting events
+- Sources (Weimax, Costco, Other) track where wines were purchased
+- Merge capability — because OCR often creates slight name variations of the same wine
+- Dark wine-red theme (#722f37), Apple UX conventions
+
+**What makes this app "Ken's":** The rating scale, the import workflow optimized for Weimax receipts, the seller-notes preservation, and the assumption that wine tracking is a solo activity (no sharing, no social features).
 
 ## Running the app
 

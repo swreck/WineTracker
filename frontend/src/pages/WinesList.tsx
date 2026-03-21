@@ -7,6 +7,7 @@ import { AlphabeticalJump } from '../components/AlphabeticalJump';
 
 interface Props {
   onSelectWine: (id: number) => void;
+  filterWineIds?: number[];
 }
 
 const colorLabels: Record<string, string> = {
@@ -19,7 +20,7 @@ const colorLabels: Record<string, string> = {
 type SortField = 'name' | 'vintage' | 'price' | 'rating' | 'tastings';
 type SortDir = 'asc' | 'desc';
 
-export default function WinesList({ onSelectWine }: Props) {
+export default function WinesList({ onSelectWine, filterWineIds }: Props) {
   const [wines, setWines] = useState<Wine[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -148,6 +149,11 @@ export default function WinesList({ onSelectWine }: Props) {
   const filteredAndSortedWines = useMemo(() => {
     // First, filter
     let result = wines.filter((w) => {
+      // Import filter - show only imported wines
+      if (filterWineIds && filterWineIds.length > 0) {
+        if (!filterWineIds.includes(w.id)) return false;
+      }
+
       // Text search
       if (search) {
         const term = search.toLowerCase();
@@ -209,7 +215,7 @@ export default function WinesList({ onSelectWine }: Props) {
     });
 
     return result;
-  }, [wines, search, sourceFilter, vintageMin, vintageMax, sortField, sortDir]);
+  }, [wines, search, sourceFilter, vintageMin, vintageMax, sortField, sortDir, filterWineIds]);
 
   // Store filtered wine IDs in context for Next/Previous navigation
   useEffect(() => {
