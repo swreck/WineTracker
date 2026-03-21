@@ -55,7 +55,7 @@ model Vintage {
 
 model PurchaseBatch {
   id           Int       @id @default(autoincrement())
-  purchaseDate DateTime  @map("purchase_date")
+  purchaseDate DateTime?  @map("purchase_date")
   theme        String?
   createdAt    DateTime  @default(now()) @map("created_at")
 
@@ -89,4 +89,16 @@ model TastingEvent {
   vintage Vintage @relation(fields: [vintageId], references: [id])
 
   @@map("tasting_events")
+}
+
+model ParseCorrection {
+  id          Int      @id @default(autoincrement())
+  mode        String   // 'receipt' or 'label'
+  originalText String  @map("original_text")
+  fieldName   String   @map("field_name") // 'name', 'vintageYear', 'color', 'price'
+  wrongValue  String   @map("wrong_value")
+  correctValue String  @map("correct_value")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("parse_corrections")
 }

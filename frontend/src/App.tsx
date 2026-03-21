@@ -8,7 +8,7 @@ import { NavigationProvider } from './context/NavigationContext';
 import './App.css';
 
 type Page =
-  | { type: 'wines' }
+  | { type: 'wines'; filterWineIds?: number[] }
   | { type: 'wine'; id: number }
   | { type: 'import' }
   | { type: 'favorites' }
@@ -56,6 +56,7 @@ function App() {
         {page.type === 'wines' && (
           <WinesList
             onSelectWine={(id) => navigate({ type: 'wine', id })}
+            filterWineIds={page.filterWineIds}
           />
         )}
         {page.type === 'wine' && (
@@ -66,7 +67,13 @@ function App() {
           />
         )}
         {page.type === 'import' && (
-          <Import onComplete={() => navigate({ type: 'wines' })} />
+          <Import onComplete={(wineIds, goToTasting) => {
+            if (goToTasting && wineIds && wineIds.length > 0) {
+              navigate({ type: 'wine', id: wineIds[0] });
+            } else {
+              navigate({ type: 'wines' });
+            }
+          }} />
         )}
         {page.type === 'favorites' && (
           <Favorites

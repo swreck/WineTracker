@@ -1,11 +1,17 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { parseText, parseReceiptText, parseLabelText } from '../parser/parser';
+import { parseText } from '../parser/parser';
+import { aiParseLabel, aiParseReceipt } from '../parser/ai-parser';
 import { findPotentialMatches, normalizeWineName, shouldAutoMatch, PotentialMatch } from '../utils/fuzzy';
 
 const router = Router();
 
-// Preview endpoint - now includes fuzzy match detection
+// Parse date string as local date (avoiding timezone issues)
+function parseLocalDate(dateStr: string): Date {
+  return new Date(dateStr + 'T12:00:00');
+}
+
+// Preview endpoint - AI-powered for labels, rules+AI for receipts
 router.post('/preview', async (req: Request, res: Response) => {
   const prisma: PrismaClient = req.app.locals.prisma;
   const { text, mode } = req.body;
@@ -15,14 +21,39 @@ router.post('/preview', async (req: Request, res: Response) => {
   }
 
   try {
-    // Use appropriate parser based on mode
-    let result;
-    if (mode === 'receipt') {
-      result = parseReceiptText(text);
-    } else if (mode === 'label') {
-      result = parseLabelText(text);
+    let batches: any[];
+    let ambiguities: any[] = [];
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+
+    if (mode === 'label') {
+      // Pure AI parsing for labels
+      if (!apiKey) {
+        return res.status(500).json({ error: 'AI service not configured' });
+      }
+      const result = await aiParseLabel(text, apiKey, prisma);
+      batches = result.batches;
+      ambiguities = result.ambiguities;
+    } else if (mode === 'receipt' && apiKey) {
+      // Rules first, then AI cleanup for receipts
+      const rulesResult = parseText(text);
+      const aiResult = await aiParseReceipt(text, rulesResult, apiKey, prisma);
+      batches = aiResult.batches;
+      ambiguities = [...rulesResult.ambiguities, ...aiResult.ambiguities];
     } else {
-      result = parseText(text);
+      // Fallback to pure rules (standard mode or no API key)
+      const result = parseText(text);
+      batches = result.batches;
+      ambiguities = result.ambiguities;
+    }
+
+    // Normalize batch dates - ensure purchaseDate is set
+    for (const batch of batches) {
+      if (batch.purchaseDate && typeof batch.purchaseDate === 'string') {
+        batch.purchaseDate = new Date(batch.purchaseDate);
+      } else if (!batch.purchaseDate) {
+        batch.purchaseDate = new Date();
+      }
     }
 
     // Get all existing wines for fuzzy matching
@@ -38,25 +69,30 @@ router.post('/preview', async (req: Request, res: Response) => {
       matches: PotentialMatch[];
     }[] = [];
 
-    for (let batchIndex = 0; batchIndex < result.batches.length; batchIndex++) {
-      const batch = result.batches[batchIndex];
-      for (let itemIndex = 0; itemIndex < batch.items.length; itemIndex++) {
+    // Track existing exact matches
+    const existingMatches: { name: string; vintageYear: number; message: string }[] = [];
+
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batch = batches[batchIndex];
+      for (let itemIndex = 0; itemIndex < (batch.items || []).length; itemIndex++) {
         const item = batch.items[itemIndex];
 
-        // Check for exact case-insensitive match first
+        // Check for exact case-insensitive match
         const exactMatch = existingWines.find(
           w => w.name.toLowerCase() === item.name.toLowerCase()
         );
 
         if (exactMatch) {
-          // Exact match - no need to flag
+          existingMatches.push({
+            name: item.name,
+            vintageYear: item.vintageYear,
+            message: 'Will add new purchase record to existing wine',
+          });
           continue;
         }
 
         // Look for fuzzy matches
         const matches = findPotentialMatches(item.name, existingWines);
-
-        // Filter to only non-exact matches that need user attention
         const needsAttention = matches.filter(m => !shouldAutoMatch(m));
 
         if (needsAttention.length > 0) {
@@ -64,27 +100,30 @@ router.post('/preview', async (req: Request, res: Response) => {
             batchIndex,
             itemIndex,
             importedName: item.name,
-            matches: needsAttention.slice(0, 3) // Top 3 suggestions
+            matches: needsAttention.slice(0, 3)
           });
         }
       }
     }
 
-    const itemCount = result.batches.reduce((sum, b) => sum + b.items.length, 0);
-    const tastingCount = result.batches.reduce(
-      (sum, b) => sum + b.items.reduce((s, i) => s + i.tastings.length, 0),
+    const itemCount = batches.reduce((sum: number, b: any) => sum + (b.items?.length || 0), 0);
+    const tastingCount = batches.reduce(
+      (sum: number, b: any) => sum + (b.items || []).reduce((s: number, i: any) => s + (i.tastings?.length || 0), 0),
       0
     );
 
     res.json({
-      batches: result.batches,
-      ambiguities: result.ambiguities,
+      batches,
+      ambiguities,
       potentialMatches,
+      existingMatches,
       summary: {
-        batchCount: result.batches.length,
+        batchCount: batches.length,
         itemCount,
         tastingCount,
-        ambiguityCount: result.ambiguities.length,
+        ambiguityCount: ambiguities.length,
+        existingCount: existingMatches.length,
+        newCount: itemCount - existingMatches.length,
         potentialMatchCount: potentialMatches.length,
       },
     });
@@ -94,29 +133,38 @@ router.post('/preview', async (req: Request, res: Response) => {
   }
 });
 
-// Execute import - uses normalized matching and accepts user match decisions
+// Execute import - accepts edited items directly
 router.post('/execute', async (req: Request, res: Response) => {
   const prisma: PrismaClient = req.app.locals.prisma;
-  const { text, mode, matchDecisions } = req.body;
+  const { text, mode, matchDecisions, editedBatches } = req.body;
 
+  // editedBatches: if provided, use these instead of re-parsing
+  // This supports inline editing of parsed results
   // matchDecisions: { [importedName: string]: number | null }
-  // - number = use existing wine with this ID
-  // - null = create new wine (user rejected match)
-
-  if (!text || typeof text !== 'string') {
-    return res.status(400).json({ error: 'Text is required' });
-  }
 
   try {
-    let parseResult;
-    if (mode === 'receipt') {
-      parseResult = parseReceiptText(text);
-    } else if (mode === 'label') {
-      parseResult = parseLabelText(text);
+    let batches: any[];
+
+    if (editedBatches) {
+      // Use the user-edited data directly
+      batches = editedBatches;
+    } else if (text) {
+      // Re-parse from text (legacy path)
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (mode === 'label' && apiKey) {
+        const result = await aiParseLabel(text, apiKey, prisma);
+        batches = result.batches;
+      } else if (mode === 'receipt' && apiKey) {
+        const rulesResult = parseText(text);
+        const aiResult = await aiParseReceipt(text, rulesResult, apiKey, prisma);
+        batches = aiResult.batches;
+      } else {
+        const result = parseText(text);
+        batches = result.batches;
+      }
     } else {
-      parseResult = parseText(text);
+      return res.status(400).json({ error: 'Either text or editedBatches is required' });
     }
-    const { batches, ambiguities } = parseResult;
 
     // Get all existing wines for matching
     const existingWines = await prisma.wine.findMany({
@@ -133,83 +181,86 @@ router.post('/execute', async (req: Request, res: Response) => {
       tastingsCreated: 0,
     };
 
+    const importedWineIds: number[] = [];
+
     for (const batch of batches) {
+      // Parse purchase date - truly optional
+      let purchaseDate: Date | null = null;
+      if (batch.purchaseDate) {
+        purchaseDate = typeof batch.purchaseDate === 'string'
+          ? new Date(batch.purchaseDate)
+          : batch.purchaseDate;
+      }
+
       const purchaseBatch = await prisma.purchaseBatch.create({
         data: {
-          purchaseDate: batch.purchaseDate,
+          purchaseDate,
           theme: batch.theme,
         },
       });
       results.purchaseBatchesCreated++;
 
-      for (const item of batch.items) {
+      for (const item of (batch.items || [])) {
+        // Skip items without a name
+        if (!item.name || item.name.trim().length < 2) continue;
+
         let wine = null;
 
         // Check if user made an explicit match decision
         if (matchDecisions && matchDecisions[item.name] !== undefined) {
           const decision = matchDecisions[item.name];
           if (decision !== null) {
-            // User chose to match with existing wine
             wine = await prisma.wine.findUnique({ where: { id: decision } });
-            if (wine) {
-              results.winesMatched++;
-            }
+            if (wine) results.winesMatched++;
           }
-          // If decision is null, user wants a new wine (fall through)
         }
 
         // If no explicit decision, try to match
         if (!wine) {
-          // First: exact case-insensitive match
           wine = await prisma.wine.findFirst({
-            where: {
-              name: { equals: item.name, mode: 'insensitive' },
-            },
+            where: { name: { equals: item.name, mode: 'insensitive' } },
           });
 
-          // Second: normalized exact match (catches accent differences)
           if (!wine) {
             const normImported = normalizeWineName(item.name);
             const normalizedMatch = existingWines.find(
               w => normalizeWineName(w.name) === normImported
             );
             if (normalizedMatch) {
-              wine = await prisma.wine.findUnique({
-                where: { id: normalizedMatch.id }
-              });
+              wine = await prisma.wine.findUnique({ where: { id: normalizedMatch.id } });
             }
           }
 
-          if (wine) {
-            results.winesMatched++;
-          }
+          if (wine) results.winesMatched++;
         }
 
         // Create new wine if no match
         if (!wine) {
           wine = await prisma.wine.create({
-            data: {
-              name: item.name,
-              color: item.color,
-            },
+            data: { name: item.name, color: item.color || 'red' },
           });
           results.winesCreated++;
         }
 
+        if (!importedWineIds.includes(wine.id)) {
+          importedWineIds.push(wine.id);
+        }
+
+        // Skip vintage creation if no valid year
+        const vintageYear = item.vintageYear || 0;
+        if (vintageYear === 0) continue;
+
         // Find or create vintage
         let vintage = await prisma.vintage.findFirst({
-          where: {
-            wineId: wine.id,
-            vintageYear: item.vintageYear,
-          },
+          where: { wineId: wine.id, vintageYear },
         });
 
         if (!vintage) {
           vintage = await prisma.vintage.create({
             data: {
               wineId: wine.id,
-              vintageYear: item.vintageYear,
-              sellerNotes: item.sellerNotes,
+              vintageYear,
+              sellerNotes: item.sellerNotes || null,
             },
           });
           results.vintagesCreated++;
@@ -223,20 +274,20 @@ router.post('/execute', async (req: Request, res: Response) => {
           }
         }
 
-        // Create purchase item (round price to nearest dollar)
+        // Create purchase item
         await prisma.purchaseItem.create({
           data: {
             purchaseBatchId: purchaseBatch.id,
             wineId: wine.id,
             vintageId: vintage.id,
             pricePaid: item.price ? Math.round(item.price) : null,
-            quantityPurchased: item.quantity,
+            quantityPurchased: item.quantity || 1,
           },
         });
         results.purchaseItemsCreated++;
 
-        // Create tastings (skip duplicates)
-        for (const tasting of item.tastings) {
+        // Create tastings
+        for (const tasting of (item.tastings || [])) {
           if (tasting.rating === 0 && !tasting.notes) continue;
 
           const existingTasting = await prisma.tastingEvent.findFirst({
@@ -251,7 +302,7 @@ router.post('/execute', async (req: Request, res: Response) => {
             await prisma.tastingEvent.create({
               data: {
                 vintageId: vintage.id,
-                tastingDate: tasting.date,
+                tastingDate: tasting.date || null,
                 rating: tasting.rating || 0,
                 notes: tasting.notes,
               },
@@ -265,11 +316,43 @@ router.post('/execute', async (req: Request, res: Response) => {
     res.json({
       success: true,
       results,
-      ambiguities,
+      importedWineIds,
+      ambiguities: [],
     });
   } catch (error) {
     console.error('Error executing import:', error);
     res.status(500).json({ error: 'Failed to execute import' });
+  }
+});
+
+// Save corrections for learning
+router.post('/corrections', async (req: Request, res: Response) => {
+  const prisma: PrismaClient = req.app.locals.prisma;
+  const { corrections, mode } = req.body;
+
+  // corrections: [{ fieldName, wrongValue, correctValue, originalText }]
+  if (!corrections || !Array.isArray(corrections)) {
+    return res.status(400).json({ error: 'corrections array is required' });
+  }
+
+  try {
+    for (const c of corrections) {
+      if (c.wrongValue !== c.correctValue) {
+        await prisma.parseCorrection.create({
+          data: {
+            mode: mode || 'receipt',
+            originalText: (c.originalText || '').slice(0, 500),
+            fieldName: c.fieldName,
+            wrongValue: String(c.wrongValue),
+            correctValue: String(c.correctValue),
+          },
+        });
+      }
+    }
+    res.json({ success: true, saved: corrections.length });
+  } catch (error) {
+    console.error('Error saving corrections:', error);
+    res.status(500).json({ error: 'Failed to save corrections' });
   }
 });
 

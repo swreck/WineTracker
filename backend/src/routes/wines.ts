@@ -192,7 +192,7 @@ router.post('/create-with-vintage', async (req: Request, res: Response) => {
     if (price || quantity > 0) {
       const purchaseBatch = await prisma.purchaseBatch.create({
         data: {
-          purchaseDate: purchaseDate ? parseLocalDate(purchaseDate) : new Date(),
+          purchaseDate: purchaseDate ? parseLocalDate(purchaseDate) : null,
         },
       });
 

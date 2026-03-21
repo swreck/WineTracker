@@ -3,7 +3,7 @@ import { api } from '../api/client';
 import type { ImportPreview, ImportResult } from '../api/client';
 
 interface Props {
-  onComplete: () => void;
+  onComplete: (wineIds?: number[], goToTasting?: boolean) => void;
 }
 
 type Stage = 'input' | 'preview' | 'complete';
@@ -27,6 +27,13 @@ interface ManualEntry {
 
 const currentYear = new Date().getFullYear();
 
+const colorLabels: Record<string, string> = {
+  red: 'Red',
+  white: 'White',
+  rose: 'Rosé',
+  sparkling: 'Sparkling',
+};
+
 export default function Import({ onComplete }: Props) {
   const [stage, setStage] = useState<Stage>('input');
   const [text, setText] = useState('');
@@ -36,8 +43,13 @@ export default function Import({ onComplete }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Editable parsed batches (user can modify before confirming)
+  const [editedBatches, setEditedBatches] = useState<any[] | null>(null);
+
+  // Track original values for corrections
+  const [originalBatches, setOriginalBatches] = useState<any[] | null>(null);
+
   // Match decisions: { importedName: existingWineId | null }
-  // null means "create new wine", number means "use this existing wine"
   const [matchDecisions, setMatchDecisions] = useState<Record<string, number | null>>({});
 
   // Manual entry state
@@ -47,7 +59,7 @@ export default function Import({ onComplete }: Props) {
     color: 'red',
     price: '',
     quantity: 1,
-    purchaseDate: new Date().toISOString().split('T')[0],
+    purchaseDate: '',
     sellerNotes: '',
     source: '',
     sourceCustom: '',
@@ -57,6 +69,13 @@ export default function Import({ onComplete }: Props) {
   });
   const [showOlderYears, setShowOlderYears] = useState(false);
   const [showManualRatingPicker, setShowManualRatingPicker] = useState(false);
+
+  // Tasting addition per-item in preview
+  const [previewTastings, setPreviewTastings] = useState<Record<string, { rating: string; notes: string }>>({});
+  const [showPreviewRatingPicker, setShowPreviewRatingPicker] = useState<string | null>(null);
+
+  // Whether to navigate to tasting after import
+  const [goToTasting, setGoToTasting] = useState(false);
 
   const ratingOptions = [
     { value: 4, label: '<5' },
@@ -82,11 +101,14 @@ export default function Import({ onComplete }: Props) {
     try {
       setLoading(true);
       setError(null);
-      // For label mode, use 'label' to trigger flexible single-bottle parsing
       const apiMode = mode === 'label' ? 'label' : mode === 'receipt' ? 'receipt' : 'standard';
       const data = await api.previewImport(text, apiMode);
       setPreview(data);
-      setMatchDecisions({}); // Reset match decisions on re-preview
+      // Deep clone batches for editing
+      const cloned = JSON.parse(JSON.stringify(data.batches));
+      setEditedBatches(cloned);
+      setOriginalBatches(JSON.parse(JSON.stringify(data.batches)));
+      setMatchDecisions({});
       setStage('preview');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to parse import');
@@ -95,16 +117,118 @@ export default function Import({ onComplete }: Props) {
     }
   }
 
-  async function handleExecute() {
+  function updateItem(batchIndex: number, itemIndex: number, field: string, value: any) {
+    if (!editedBatches) return;
+    const updated = [...editedBatches];
+    updated[batchIndex] = { ...updated[batchIndex], items: [...updated[batchIndex].items] };
+    updated[batchIndex].items[itemIndex] = { ...updated[batchIndex].items[itemIndex], [field]: value };
+    setEditedBatches(updated);
+  }
+
+  function removeItem(batchIndex: number, itemIndex: number) {
+    if (!editedBatches) return;
+    const updated = [...editedBatches];
+    updated[batchIndex] = {
+      ...updated[batchIndex],
+      items: updated[batchIndex].items.filter((_: any, i: number) => i !== itemIndex),
+    };
+    // Remove empty batches
+    setEditedBatches(updated.filter((b: any) => b.items.length > 0));
+  }
+
+  async function saveCorrections() {
+    if (!originalBatches || !editedBatches) return;
+
+    const corrections: { fieldName: string; wrongValue: string; correctValue: string; originalText: string }[] = [];
+
+    for (let bi = 0; bi < originalBatches.length; bi++) {
+      const origBatch = originalBatches[bi];
+      const editBatch = editedBatches[bi];
+      if (!editBatch) continue;
+
+      for (let ii = 0; ii < (origBatch.items || []).length; ii++) {
+        const orig = origBatch.items[ii];
+        const edited = editBatch.items?.[ii];
+        if (!edited) continue;
+
+        for (const field of ['name', 'color', 'vintageYear', 'price']) {
+          const origVal = String(orig[field] ?? '');
+          const editVal = String(edited[field] ?? '');
+          if (origVal !== editVal) {
+            corrections.push({
+              fieldName: field,
+              wrongValue: origVal,
+              correctValue: editVal,
+              originalText: text.slice(0, 500),
+            });
+          }
+        }
+      }
+    }
+
+    if (corrections.length > 0) {
+      try {
+        const apiMode = mode === 'label' ? 'label' : 'receipt';
+        await api.saveCorrections(corrections, apiMode);
+      } catch {
+        // Silent fail — corrections are nice-to-have
+      }
+    }
+  }
+
+  function buildErrorMailto(errorDetail: string) {
+    const subject = encodeURIComponent('For Wine Tracker punch list');
+    const body = encodeURIComponent(
+      `IMPORT ERROR\n` +
+      `────────────\n` +
+      `Mode: ${mode}\n` +
+      `Date: ${new Date().toISOString()}\n\n` +
+      `Problem:\n${errorDetail}\n\n` +
+      `Raw input text:\n${text.slice(0, 1000)}\n\n` +
+      `Parsed result:\n${JSON.stringify(editedBatches, null, 2)?.slice(0, 1000) || 'none'}\n`
+    );
+    return `mailto:kenrosen@gmail.com?subject=${subject}&body=${body}`;
+  }
+
+  async function handleExecute(addTasting = false) {
     try {
       setLoading(true);
       setError(null);
+      setGoToTasting(addTasting);
+
+      // Save corrections before executing
+      await saveCorrections();
+
+      // Inject any preview tastings into the edited batches
+      if (editedBatches && Object.keys(previewTastings).length > 0) {
+        for (let bi = 0; bi < editedBatches.length; bi++) {
+          for (let ii = 0; ii < (editedBatches[bi].items || []).length; ii++) {
+            const key = `${bi}-${ii}`;
+            const tasting = previewTastings[key];
+            if (tasting && tasting.rating) {
+              editedBatches[bi].items[ii].tastings = [
+                ...(editedBatches[bi].items[ii].tastings || []),
+                { rating: parseFloat(tasting.rating), notes: tasting.notes || undefined, date: new Date().toISOString() },
+              ];
+            }
+          }
+        }
+      }
+
       const apiMode = mode === 'label' ? 'label' : mode === 'receipt' ? 'receipt' : 'standard';
-      const data = await api.executeImport(text, apiMode, matchDecisions);
+      const data = await api.executeImport(text, apiMode, matchDecisions, editedBatches || undefined);
+
+      if (data.results.winesCreated === 0 && data.results.winesMatched === 0) {
+        const detail = 'No wines were created or matched. The parser could not extract valid wine data from the input.';
+        setError(detail);
+        return;
+      }
+
       setResult(data);
       setStage('complete');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to execute import');
+      const msg = e instanceof Error ? e.message : 'Failed to execute import';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -125,14 +249,13 @@ export default function Import({ onComplete }: Props) {
       setLoading(true);
       setError(null);
 
-      // Create the wine directly via API
       const data = await api.createWineWithVintage({
         name: manualEntry.name.trim(),
         color: manualEntry.color,
         vintageYear: manualEntry.vintageYear,
         price: manualEntry.price ? parseFloat(manualEntry.price) : undefined,
         quantity: manualEntry.quantity,
-        purchaseDate: manualEntry.purchaseDate,
+        purchaseDate: manualEntry.purchaseDate || undefined,
         sellerNotes: manualEntry.sellerNotes.trim() || undefined,
         source: manualEntry.source || undefined,
         sourceCustom: manualEntry.source === 'other' ? manualEntry.sourceCustom.trim() : undefined,
@@ -155,6 +278,7 @@ export default function Import({ onComplete }: Props) {
           purchaseItemsCreated: manualEntry.price || manualEntry.quantity > 0 ? 1 : 0,
           tastingsCreated: data.tastingCreated ? 1 : 0,
         },
+        importedWineIds: [data.wine.id],
         ambiguities: [],
       });
       setStage('complete');
@@ -165,6 +289,7 @@ export default function Import({ onComplete }: Props) {
     }
   }
 
+  // ===== COMPLETE STAGE =====
   if (stage === 'complete' && result) {
     return (
       <div className="import-complete">
@@ -199,19 +324,21 @@ export default function Import({ onComplete }: Props) {
         )}
 
         <div className="complete-actions">
-          <button className="primary-button" onClick={onComplete}>
-            View Wines
+          <button className="primary-button" onClick={() => onComplete(result.importedWineIds, goToTasting)}>
+            {goToTasting ? 'Add Tasting Now' : 'Back to Wines'}
           </button>
           <button onClick={() => {
             setStage('input');
             setText('');
+            setEditedBatches(null);
+            setOriginalBatches(null);
             setManualEntry({
               name: '',
               vintageYear: currentYear - 2,
               color: 'red',
               price: '',
               quantity: 1,
-              purchaseDate: new Date().toISOString().split('T')[0],
+              purchaseDate: '',
               sellerNotes: '',
               source: '',
               sourceCustom: '',
@@ -227,34 +354,149 @@ export default function Import({ onComplete }: Props) {
     );
   }
 
-  if (stage === 'preview' && preview) {
+  // ===== PREVIEW STAGE =====
+  if (stage === 'preview' && preview && editedBatches) {
+    const totalItems = editedBatches.reduce((sum: number, b: any) => sum + (b.items?.length || 0), 0);
+
     return (
       <div className="import-preview">
-        <h2>Import Preview</h2>
+        <h2>Review & Edit</h2>
 
-        <div className="preview-summary">
-          <h4>Summary</h4>
-          <ul>
-            <li>Purchase batches: {preview.summary.batchCount}</li>
-            <li>Wine items: {preview.summary.itemCount} ({preview.summary.newCount || preview.summary.itemCount} new, {preview.summary.existingCount || 0} already in database)</li>
-            <li>Tasting notes: {preview.summary.tastingCount}</li>
-          </ul>
-        </div>
+        {totalItems === 0 && (
+          <div className="error">
+            No wines were parsed from the text. Try editing the text and re-previewing, or use Manual mode.
+          </div>
+        )}
 
-        {/* Editable text area */}
-        <div className="edit-import-text">
-          <h4>Edit Import Text</h4>
-          <p className="edit-hint">You can edit the text below and re-preview.</p>
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={8}
-          />
-          <button onClick={handlePreview} disabled={loading}>
-            {loading ? 'Re-parsing...' : 'Re-Preview'}
-          </button>
-        </div>
+        {/* Directly editable parsed items */}
+        {editedBatches.map((batch: any, bi: number) => (
+          <div key={bi} className="batch-preview">
+            <div className="batch-header">
+              <strong>
+                {batch.purchaseDate
+                  ? new Date(batch.purchaseDate).toLocaleDateString()
+                  : 'No date'}
+              </strong>
+              {batch.theme && <span className="theme"> - {batch.theme}</span>}
+              <span className="item-count"> ({batch.items?.length || 0} wines)</span>
+            </div>
+            <div className="batch-items">
+              {(batch.items || []).map((item: any, ii: number) => {
+                const key = `${bi}-${ii}`;
+                const hasError = !item.name || item.name.trim().length < 2;
+                const tasting = previewTastings[key];
+                return (
+                  <div key={ii} className={`preview-item editable ${hasError ? 'has-error' : ''}`}>
+                    <div className="preview-item-fields">
+                      <input
+                        type="text"
+                        value={item.name || ''}
+                        onChange={(e) => updateItem(bi, ii, 'name', e.target.value)}
+                        placeholder="Wine name"
+                        className={`edit-field-input wine-name-input ${hasError ? 'field-error' : ''}`}
+                      />
+                      {hasError && <span className="field-error-msg">Name required</span>}
 
+                      <div className="preview-item-meta">
+                        <input
+                          type="number"
+                          value={item.vintageYear || ''}
+                          onChange={(e) => updateItem(bi, ii, 'vintageYear', parseInt(e.target.value) || 0)}
+                          placeholder="Year"
+                          className="edit-field-input small"
+                        />
+
+                        <select
+                          className="edit-color-select"
+                          value={item.color || 'red'}
+                          onChange={(e) => updateItem(bi, ii, 'color', e.target.value)}
+                        >
+                          {Object.entries(colorLabels).map(([val, label]) => (
+                            <option key={val} value={val}>{label}</option>
+                          ))}
+                        </select>
+
+                        <div className="price-field">
+                          <span className="price-prefix">$</span>
+                          <input
+                            type="number"
+                            value={item.price || ''}
+                            onChange={(e) => updateItem(bi, ii, 'price', e.target.value ? parseFloat(e.target.value) : undefined)}
+                            placeholder="Price"
+                            className="edit-field-input small price-input"
+                          />
+                        </div>
+
+                        {item.quantity > 1 && <span className="qty">x{item.quantity}</span>}
+
+                        <button
+                          className="remove-item-btn"
+                          onClick={() => removeItem(bi, ii)}
+                          title="Remove this wine"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={item.sellerNotes || ''}
+                      onChange={(e) => updateItem(bi, ii, 'sellerNotes', e.target.value || undefined)}
+                      placeholder="Seller notes (optional)"
+                      className="edit-field-input seller-notes-input"
+                    />
+
+                    {/* Inline tasting option */}
+                    {!tasting ? (
+                      <button
+                        className="add-tasting-inline-btn"
+                        onClick={() => setPreviewTastings({ ...previewTastings, [key]: { rating: '', notes: '' } })}
+                      >
+                        + Add tasting
+                      </button>
+                    ) : (
+                      <div className="inline-tasting-fields">
+                        <button
+                          type="button"
+                          className={`inline-rating-btn ${tasting.rating ? 'has-rating' : ''}`}
+                          onClick={() => setShowPreviewRatingPicker(key)}
+                        >
+                          {tasting.rating
+                            ? ratingOptions.find(r => String(r.value) === tasting.rating)?.label || tasting.rating
+                            : 'Tap to rate'}
+                        </button>
+                        <input
+                          type="text"
+                          value={tasting.notes}
+                          onChange={(e) => setPreviewTastings({
+                            ...previewTastings,
+                            [key]: { ...tasting, notes: e.target.value },
+                          })}
+                          placeholder="Tasting notes"
+                          className="edit-field-input tasting-notes-input"
+                        />
+                        <button
+                          className="remove-item-btn"
+                          onClick={() => {
+                            const next = { ...previewTastings };
+                            delete next[key];
+                            setPreviewTastings(next);
+                          }}
+                          title="Remove tasting"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+
+        {/* Potential matches */}
         {preview.potentialMatches && preview.potentialMatches.length > 0 && (
           <div className="potential-matches">
             <h4>Possible Duplicates ({preview.potentialMatches.length})</h4>
@@ -299,22 +541,6 @@ export default function Import({ onComplete }: Props) {
                     <span className="match-new">Create as new wine</span>
                   </label>
                 </div>
-                {matchDecisions[pm.importedName] === undefined && (
-                  <div className="match-warning">Please select an option</div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {preview.existingMatches && preview.existingMatches.length > 0 && (
-          <div className="existing-matches">
-            <h4>Already in Database ({preview.existingMatches.length})</h4>
-            <p className="match-note">These wines exist — new purchase records will be added.</p>
-            {preview.existingMatches.map((match: any, i: number) => (
-              <div key={i} className="match-item">
-                <strong>{match.name} {match.vintageYear}</strong>
-                <span className="match-message">{match.message}</span>
               </div>
             ))}
           </div>
@@ -322,73 +548,39 @@ export default function Import({ onComplete }: Props) {
 
         {preview.ambiguities.length > 0 && (
           <div className="ambiguities warning">
-            <h4>Ambiguities Found ({preview.ambiguities.length})</h4>
-            <p className="amb-note">
-              These items need review after import. The import will proceed with best guesses.
-            </p>
+            <h4>Notes ({preview.ambiguities.length})</h4>
             {preview.ambiguities.map((amb, i) => (
               <div key={i} className="ambiguity-item">
-                <div className="amb-type">{amb.type}</div>
                 <div className="amb-message">{amb.message}</div>
-                <div className="amb-context">{amb.context}</div>
-                {amb.suggestion && (
-                  <div className="amb-suggestion">Suggestion: {amb.suggestion}</div>
-                )}
               </div>
             ))}
           </div>
         )}
 
-        <div className="preview-batches">
-          <h4>Parsed Data</h4>
-          {preview.batches.slice(0, 15).map((batch, bi) => (
-            <div key={bi} className="batch-preview">
-              <div className="batch-header">
-                <strong>
-                  {new Date(batch.purchaseDate).toLocaleDateString()}
-                </strong>
-                {batch.theme && <span className="theme"> - {batch.theme}</span>}
-                <span className="item-count"> ({batch.items?.length || 0} wines)</span>
-              </div>
-              <div className="batch-items">
-                {(batch.items || []).map((item: any, ii: number) => (
-                  <div key={ii} className="preview-item">
-                    <div className="preview-item-header">
-                      <strong>{item.name}</strong>{' '}
-                      {item.vintageYear}
-                      <span className={`color-badge ${item.color}`}>{item.color}</span>
-                      {item.price && <span className="price">${item.price}</span>}
-                      {item.quantity > 1 && <span className="qty">x{item.quantity}</span>}
-                    </div>
-                    {item.sellerNotes && (
-                      <div className="preview-seller-notes">
-                        <em>Seller:</em> {item.sellerNotes}
-                      </div>
-                    )}
-                    {item.tastings?.length > 0 && (
-                      <div className="preview-tastings">
-                        <em>Your Tastings:</em>
-                        <ul>
-                          {item.tastings.map((t: any, ti: number) => (
-                            <li key={ti}>
-                              {new Date(t.date).toLocaleDateString()}: {t.rating > 0 ? t.rating : 'NR'}
-                              {t.notes && ` - ${t.notes}`}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-          {preview.batches.length > 15 && (
-            <p className="more-batches">...and {preview.batches.length - 15} more batches</p>
-          )}
-        </div>
+        {/* Re-parse option */}
+        <details className="edit-text-section">
+          <summary>Edit raw text and re-parse</summary>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={6}
+          />
+          <button onClick={handlePreview} disabled={loading}>
+            {loading ? 'Re-parsing...' : 'Re-Preview'}
+          </button>
+        </details>
 
-        {error && <div className="error">{error}</div>}
+        {error && (
+          <div className="error error-with-actions">
+            <p>{error}</p>
+            <div className="error-actions">
+              <span className="error-hint">Fix the fields above, or</span>
+              <a href={buildErrorMailto(error)} className="error-report-btn">
+                Report bug
+              </a>
+            </div>
+          </div>
+        )}
 
         <div className="preview-actions">
           <button onClick={() => setStage('input')}>Back</button>
@@ -398,19 +590,59 @@ export default function Import({ onComplete }: Props) {
             );
             const hasUnresolved = unresolvedMatches.length > 0;
             return (
-              <button
-                className="primary-button"
-                onClick={handleExecute}
-                disabled={loading || hasUnresolved}
-                title={hasUnresolved ? 'Please resolve all potential duplicates above' : ''}
-              >
-                {loading ? 'Importing...' : hasUnresolved
-                  ? `Resolve ${unresolvedMatches.length} match${unresolvedMatches.length > 1 ? 'es' : ''} first`
-                  : 'Confirm Import'}
-              </button>
+              <>
+                <button
+                  className="primary-button"
+                  onClick={() => handleExecute(false)}
+                  disabled={loading || hasUnresolved || totalItems === 0}
+                  title={hasUnresolved ? 'Please resolve all potential duplicates above' : ''}
+                >
+                  {loading ? 'Importing...' : hasUnresolved
+                    ? `Resolve ${unresolvedMatches.length} match${unresolvedMatches.length > 1 ? 'es' : ''} first`
+                    : 'Confirm Import'}
+                </button>
+                {!hasUnresolved && totalItems > 0 && (
+                  <button
+                    className="secondary-button"
+                    onClick={() => handleExecute(true)}
+                    disabled={loading}
+                  >
+                    Confirm & Add Tasting
+                  </button>
+                )}
+              </>
             );
           })()}
         </div>
+
+        {/* Rating picker popup for preview tastings */}
+        {showPreviewRatingPicker && (
+          <div className="rating-popup-overlay" onClick={() => setShowPreviewRatingPicker(null)}>
+            <div className="rating-popup" onClick={(e) => e.stopPropagation()}>
+              <div className="rating-popup-header">Select Rating</div>
+              <div className="rating-options-grid">
+                {ratingOptions.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    className={`rating-option ${value < 6 ? 'low' : value >= 8 ? 'high' : 'mid'} ${previewTastings[showPreviewRatingPicker]?.rating === String(value) ? 'selected' : ''}`}
+                    onClick={() => {
+                      setPreviewTastings({
+                        ...previewTastings,
+                        [showPreviewRatingPicker]: {
+                          ...previewTastings[showPreviewRatingPicker],
+                          rating: String(value),
+                        },
+                      });
+                      setShowPreviewRatingPicker(null);
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -425,7 +657,7 @@ export default function Import({ onComplete }: Props) {
     </div>
   );
 
-  // Manual entry form
+  // ===== MANUAL ENTRY =====
   if (mode === 'manual') {
     const years = [];
     for (let y = currentYear; y >= currentYear - 10; y--) {
@@ -525,11 +757,32 @@ export default function Import({ onComplete }: Props) {
 
           <div className="form-field">
             <label>Purchase Date</label>
-            <input
-              type="date"
-              value={manualEntry.purchaseDate}
-              onChange={(e) => setManualEntry({ ...manualEntry, purchaseDate: e.target.value })}
-            />
+            <div className="date-field-row">
+              <input
+                type="date"
+                value={manualEntry.purchaseDate}
+                onChange={(e) => setManualEntry({ ...manualEntry, purchaseDate: e.target.value })}
+                placeholder="No date"
+              />
+              {manualEntry.purchaseDate ? (
+                <button
+                  type="button"
+                  className="date-clear-btn"
+                  onClick={() => setManualEntry({ ...manualEntry, purchaseDate: '' })}
+                  title="Clear date"
+                >
+                  ✕
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="date-today-btn"
+                  onClick={() => setManualEntry({ ...manualEntry, purchaseDate: new Date().toISOString().split('T')[0] })}
+                >
+                  Today
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="form-field">
@@ -612,7 +865,6 @@ export default function Import({ onComplete }: Props) {
           {loading ? 'Adding...' : 'Add Wine'}
         </button>
 
-        {/* Rating picker popup */}
         {showManualRatingPicker && (
           <div className="rating-popup-overlay" onClick={() => setShowManualRatingPicker(false)}>
             <div className="rating-popup" onClick={(e) => e.stopPropagation()}>
@@ -638,6 +890,7 @@ export default function Import({ onComplete }: Props) {
     );
   }
 
+  // ===== INPUT STAGE =====
   return (
     <div className="import-input">
       <h2>Add Wines</h2>
@@ -648,11 +901,9 @@ export default function Import({ onComplete }: Props) {
         <>
           <p>Paste OCR text from a wine store receipt.</p>
           <ul className="format-hints">
-            <li>Wine names (removes store SKU numbers)</li>
-            <li>Vintage years (2 or 4 digit)</li>
-            <li>Quantity and price (from "2 @ 39.99" format)</li>
+            <li>AI-powered parsing with learning from corrections</li>
+            <li>Wine names, vintage years, prices, quantities</li>
             <li>Seller descriptions</li>
-            <li>Ignores: tax, discounts, totals</li>
           </ul>
         </>
       )}
@@ -661,9 +912,8 @@ export default function Import({ onComplete }: Props) {
         <>
           <p>Paste OCR text from a wine bottle label photo.</p>
           <ul className="format-hints">
-            <li>Wine name (winery, region, varietal)</li>
-            <li>Vintage year</li>
-            <li>Flexible parsing for varied OCR formats</li>
+            <li>AI-powered — handles noisy OCR, logos, decorative text</li>
+            <li>Recognizes appellations, grape varieties, producers</li>
           </ul>
           <p className="hint">Tip: Take a photo with your camera app, use built-in text recognition, then paste here.</p>
         </>
@@ -696,11 +946,10 @@ FROM 30 YEAR OLD VINES, A TOP DOURO VALLEY BLEND.`
             ? `Paste label OCR here...
 
 Example:
-CHATEAU MARGAUX
-Grand Vin
-2018
-MARGAUX
-Premier Grand Cru Classé`
+CHABLIS
+APPELLATION CHABLIS CONTRÔLÉE
+RÉCOLTE 2023
+MICHEL GAYOT`
             : `Paste purchase notes here...
 
 Example:

@@ -1815,6 +1815,256 @@ th.sortable.active {
   color: var(--color-text-on-primary);
 }
 
+/* Inline editing in preview */
+.preview-item.editable {
+  padding: var(--space-3);
+  border: 1px solid var(--color-separator-opaque);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+  background: var(--color-bg-elevated);
+}
+
+.preview-item-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.preview-item-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.wine-name-input {
+  font-weight: 600;
+  font-size: var(--font-size-md);
+}
+
+.seller-notes-input {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  border-color: var(--color-separator-opaque);
+  margin-top: var(--space-1);
+}
+
+.field-error {
+  border-color: var(--color-destructive) !important;
+  background: rgba(255, 59, 48, 0.05);
+}
+
+.field-error-msg {
+  font-size: var(--font-size-xs);
+  color: var(--color-destructive);
+}
+
+.preview-item.has-error {
+  border-color: var(--color-destructive);
+}
+
+.price-field {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.price-prefix {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.price-input {
+  width: 70px !important;
+}
+
+.add-tasting-inline-btn {
+  background: none;
+  border: 1px dashed var(--color-separator-opaque);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  padding: var(--space-1) var(--space-2);
+  margin-top: var(--space-2);
+  cursor: pointer;
+  min-height: 36px;
+}
+
+.inline-tasting-fields {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.tasting-notes-input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.error-with-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.error-with-actions p {
+  margin: 0;
+}
+
+.error-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.error-hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.error-report-btn {
+  display: inline-block;
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-separator-opaque);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  min-height: 36px;
+  line-height: 24px;
+}
+
+.secondary-button {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-md);
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.date-field-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.date-field-row input[type="date"] {
+  flex: 1;
+}
+
+.date-clear-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-text-tertiary);
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.date-today-btn {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-separator-opaque);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  min-height: 32px;
+  flex-shrink: 0;
+}
+
+.edit-field-input {
+  padding: var(--space-2);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+  width: 100%;
+}
+
+.edit-field-input.small {
+  width: 80px;
+}
+
+.edit-field-input.wide {
+  flex: 1;
+}
+
+.edit-color-select {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-separator-opaque);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.remove-item-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-destructive);
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.edit-text-section {
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--color-separator-opaque);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+}
+
+.edit-text-section summary {
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.edit-text-section textarea {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--color-separator-opaque);
+  border-radius: var(--radius-md);
+  font-family: 'SF Mono', SFMono-Regular, Menlo, monospace;
+  font-size: var(--font-size-sm);
+  margin: var(--space-2) 0;
+  resize: vertical;
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
+}
+
+.edit-text-section button {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-separator-opaque);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  min-height: 40px;
+}
+
 /* Complete */
 .complete-actions {
   display: flex;
