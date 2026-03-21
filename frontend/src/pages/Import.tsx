@@ -8,7 +8,7 @@ interface Props {
 
 type Stage = 'input' | 'preview' | 'complete';
 
-type ImportMode = 'receipt' | 'label' | 'manual' | 'standard';
+type ImportMode = 'receipt' | 'label' | 'manual';
 
 interface ManualEntry {
   name: string;
@@ -653,7 +653,6 @@ export default function Import({ onComplete }: Props) {
       <button className={mode === 'receipt' ? 'active' : ''} onClick={() => setMode('receipt')}>Receipt</button>
       <button className={mode === 'label' ? 'active' : ''} onClick={() => setMode('label')}>Label</button>
       <button className={mode === 'manual' ? 'active' : ''} onClick={() => setMode('manual')}>Manual</button>
-      <button className={mode === 'standard' ? 'active' : ''} onClick={() => setMode('standard')}>Import</button>
     </div>
   );
 
@@ -919,18 +918,6 @@ export default function Import({ onComplete }: Props) {
         </>
       )}
 
-      {mode === 'standard' && (
-        <>
-          <p>Paste your wine purchase notes with tasting history.</p>
-          <ul className="format-hints">
-            <li>Purchase dates (as date headers)</li>
-            <li>Wine lines: Name, Vintage, Price, Quantity</li>
-            <li>Seller notes</li>
-            <li>Your tasting notes with dates and ratings</li>
-          </ul>
-        </>
-      )}
-
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -942,22 +929,13 @@ Example:
 14248 PINTAS CHARACTER 2019
 2 @ 39.99        S        79.98 T
 FROM 30 YEAR OLD VINES, A TOP DOURO VALLEY BLEND.`
-            : mode === 'label'
-            ? `Paste label OCR here...
+            : `Paste label OCR here...
 
 Example:
 CHABLIS
 APPELLATION CHABLIS CONTRÔLÉE
 RÉCOLTE 2023
 MICHEL GAYOT`
-            : `Paste purchase notes here...
-
-Example:
-January 15, 2024 - Winter Reds
-
-Chateau Margaux 2018 $150
-Elegant, complex nose with blackcurrant.
-Tasted 2/1/2024: 9.0 - Incredible depth.`
         }
         rows={12}
       />
