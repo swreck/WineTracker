@@ -50,28 +50,29 @@ cd backend && npx prisma db push
 cd backend && npx prisma studio
 ```
 
-## Deployment (split architecture — legacy)
+## Deployment (Railway monorepo)
 
-This app uses a split frontend/backend deployment, unlike the standard Railway monorepo pattern.
+Single Railway service serves both frontend and API. Push to main triggers auto-deploy.
 
-- **Frontend**: Vercel (`wine-tracker-ten.vercel.app`)
-  - Vercel project: `wine-tracker` under `kens-projects-c72c0ebe`
-  - Deploy: `cd frontend && npx vercel --prod --yes` (or push to main for auto-deploy)
-  - Root directory on Vercel: `frontend/`
-  - Linked from project root (`WineTracker1/.vercel/`), NOT from `frontend/`
+- **URL**: `https://wine-tracker-backend-production.up.railway.app`
+- **Railway project**: `wine-tracker`, service: `wine-tracker-backend`
+- **Root directory**: `backend/` (Railway config)
+- **Build**: `npm install → frontend build → copy dist to backend/public/ → prisma generate → tsc`
+- **Start**: `node dist/index.js`
+- **Database**: Neon PostgreSQL (same as before)
+- **Deploy**: `railway up` or push to main
+- **Logs**: `railway logs`
 
-- **Backend**: Render (`winetracker.onrender.com`)
-  - Free tier — has cold starts (~30-60s after 15min inactivity)
-  - Database: Neon PostgreSQL
-
-- **Icons**: SVG + PNGs in `frontend/public/icons/`
+- **Icons**: SVG + PNGs in `frontend/public/icons/` (copied to `backend/public/icons/` at build)
   - favicon: `/icons/icon.svg`
   - apple-touch-icon: `/icons/icon-180.png`
   - manifest icons: `/icons/icon-192.png`, `/icons/icon-512.png`
 
+- **Legacy (decommissioned)**: Vercel frontend (`wine-tracker-ten.vercel.app`) and Render backend (`winetracker.onrender.com`) are no longer the primary deployment. Can be deleted when ready.
+
 ## Key gotchas
 
-- **Neon cold starts**: Backend has retry logic with 30s timeout + warmup query in `db.ts`. Render free tier adds another 30–60s cold start on top.
+- **Neon cold starts**: Backend has retry logic with 30s timeout + warmup query in `db.ts`. Railway keeps the service warm (no Render-style cold starts).
 - **Import parser**: Three modes (standard, receipt, label) with fuzzy matching. Conflicts are surfaced for user decision before executing.
 - **Wine merging**: Preview endpoint shows conflicts; execute endpoint applies resolution strategy. Cascades vintage/tasting/purchase data.
 - **No service worker**: PWA manifest exists but no offline support — just installability.
@@ -84,6 +85,6 @@ This app uses a split frontend/backend deployment, unlike the standard Railway m
 - Touch targets ≥44px
 - Inline expand/collapse for detail views (not separate pages for vintages)
 
-## Consolidation candidate
+## Architecture note
 
-Could be migrated to Railway monorepo pattern to match Wander, Maria, and ActionMgr. Main benefit: eliminates cold starts, single URL, consistent deployment. Do not migrate without user approval.
+Migrated to Railway monorepo pattern (March 2026) to match Wander, Maria, and ActionMgr. Eliminated Render cold starts, single URL, consistent deployment.
