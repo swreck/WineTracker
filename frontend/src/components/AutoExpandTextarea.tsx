@@ -22,9 +22,9 @@ export default function AutoExpandTextarea({ maxHeight = 300, style, onInput, ..
     el.style.overflowY = scrollH > maxHeight ? 'auto' : 'hidden';
   }, [maxHeight]);
 
-  const handleInput = useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
+  const handleInput = useCallback((e: React.FormEvent<HTMLTextAreaElement> & { data?: string }) => {
     resize();
-    if (onInput) onInput(e);
+    if (onInput) (onInput as (e: React.FormEvent<HTMLTextAreaElement>) => void)(e);
   }, [resize, onInput]);
 
   // Use a callback ref to resize on mount
