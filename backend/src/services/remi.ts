@@ -1,6 +1,17 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { PrismaClient } from '@prisma/client';
 
+// Strip markdown code fences from AI responses before JSON parsing
+function extractJSON(text: string): string {
+  // Remove ```json ... ``` or ``` ... ``` wrapping
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenced) return fenced[1].trim();
+  // Try to find JSON array or object directly
+  const jsonMatch = text.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
+  if (jsonMatch) return jsonMatch[1];
+  return text.trim();
+}
+
 // Ken's Voice — shared with Maria (Messaging app)
 // This is the canonical voice definition. If it evolves, update it here.
 const KENS_VOICE = `Write like a smart colleague stating facts plainly. No marketing language. No corporate polish. No buzzwords. State the result directly. Keep it conversational — one smart person talking to another over a drink. Be direct, warm, specific. No sommelier theater, no hedging, no "I'd suggest perhaps considering." If you wouldn't say it out loud to a smart friend who doesn't know wine deeply, don't write it. One thought per sentence. Use plain language, not jargon.`;
@@ -24,6 +35,10 @@ export async function enrichWineVintage(
   appellation?: string | null,
   grape?: string | null,
 ): Promise<string> {
+  // Validate wine exists
+  const wine = await prisma.wine.findUnique({ where: { id: wineId } });
+  if (!wine) return 'Wine not found in collection.';
+
   // Check if already enriched
   const existing = await prisma.remiEnrichment.findUnique({
     where: { wineId_vintageYear: { wineId, vintageYear } },
@@ -143,9 +158,15 @@ Respond with a JSON array of objects, each with "content" (the suggestion text) 
   const responseText = message.content[0].type === 'text' ? message.content[0].text : '[]';
 
   try {
-    const parsed = JSON.parse(responseText);
+    const parsed = JSON.parse(extractJSON(responseText));
 
-    // Clear old suggestions
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      // Don't deactivate old suggestions if we got nothing new
+      const existing = await prisma.remiSuggestion.findMany({ where: { active: true } });
+      return existing.map(s => ({ id: s.id, content: s.content, wineId: s.wineId }));
+    }
+
+    // Only deactivate old suggestions after we've confirmed new ones parsed
     await prisma.remiSuggestion.updateMany({
       where: { active: true },
       data: { active: false },
@@ -154,13 +175,18 @@ Respond with a JSON array of objects, each with "content" (the suggestion text) 
     const suggestions: { id: number; content: string; wineId: number | null }[] = [];
 
     for (const s of parsed) {
-      // Try to match wine name to ID
+      // Try to match wine name to ID (skip empty names)
       let wineId: number | null = null;
       if (s.wineName) {
-        const match = allWines.find(w =>
-          w.name.toLowerCase().includes(s.wineName.toLowerCase()) ||
-          s.wineName.toLowerCase().includes(w.name.toLowerCase())
-        );
+        const searchName = s.wineName.toLowerCase();
+        const validWines = allWines.filter(w => w.name && w.name.trim().length > 1);
+        // Prefer exact match, then contains
+        const exact = validWines.find(w => w.name.toLowerCase() === searchName);
+        const partial = !exact ? validWines.find(w =>
+          w.name.toLowerCase().includes(searchName) ||
+          searchName.includes(w.name.toLowerCase())
+        ) : null;
+        const match = exact || partial;
         if (match) wineId = match.id;
       }
 
@@ -210,20 +236,22 @@ export async function chatWithRemi(
     enrichments.map(e => [`${e.wineId}-${e.vintageYear}`, e.profile])
   );
 
-  const collectionContext = allWines.map(w => {
-    const vintages = (w.vintages || []).map(v => {
-      const tastings = (v.tastingEvents || []).map(t =>
-        `rated ${t.rating}${t.notes ? `: "${t.notes.slice(0, 100)}"` : ''} (${t.tastingDate ? new Date(t.tastingDate).toLocaleDateString() : 'no date'})`
-      ).join('; ');
-      const price = v.purchaseItems?.[0]?.pricePaid;
-      const sellerNotes = v.sellerNotes;
-      const enrichment = enrichmentMap.get(`${w.id}-${v.vintageYear}`);
+  // Build compact collection context — fits all wines within Sonnet's context
+  const collectionContext = allWines
+    .filter(w => w.name && w.name.trim().length > 1) // skip empty names
+    .map(w => {
+      const vintages = (w.vintages || []).map(v => {
+        const tastings = (v.tastingEvents || []).map(t =>
+          `${t.rating}${t.notes ? ` "${t.notes.slice(0, 80)}"` : ''}`
+        ).join('; ');
+        const price = v.purchaseItems?.[0]?.pricePaid;
+        const sellerNotes = v.sellerNotes;
 
-      return `  ${v.vintageYear}: ${tastings || 'not tasted'}${price ? ` | $${price}` : ''}${sellerNotes ? ` | Gerald: "${sellerNotes.slice(0, 100)}"` : ''}${enrichment ? ` | Remi profile: ${enrichment.slice(0, 100)}` : ''}`;
+        return `${v.vintageYear}: ${tastings || '-'}${price ? ` $${price}` : ''}${sellerNotes ? ` [Gerald: "${sellerNotes.slice(0, 60)}"]` : ''}`;
+      }).join(' | ');
+
+      return `${w.name} (${w.color}): ${vintages}`;
     }).join('\n');
-
-    return `${w.name} (${w.color}${w.region ? ', ' + w.region : ''}):\n${vintages}`;
-  }).join('\n\n');
 
   const client = new Anthropic({ apiKey });
 
@@ -238,7 +266,7 @@ export async function chatWithRemi(
     system: `${REMI_PERSONA}
 
 Ken's wine collection (for reference):
-${collectionContext.slice(0, 8000)}
+${collectionContext.slice(0, 40000)}
 
 When Ken asks about a specific wine, use your knowledge of that wine AND his personal notes/ratings. When referencing Gerald's seller notes, attribute them: "Gerald described it as..." When making suggestions, be specific to wines Ken owns or has tried.`,
     messages,
@@ -322,8 +350,9 @@ Respond with JSON only, no markdown:
   const responseText = message.content[0].type === 'text' ? message.content[0].text : '[]';
 
   try {
-    return JSON.parse(responseText);
-  } catch {
+    return JSON.parse(extractJSON(responseText));
+  } catch (e) {
+    console.error('Failed to parse themes JSON:', responseText.slice(0, 200));
     return [];
   }
 }

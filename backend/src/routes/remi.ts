@@ -72,6 +72,10 @@ router.get('/enrichment/:wineId/:vintageYear', async (req: Request, res: Respons
   const wineId = parseInt(String(req.params.wineId));
   const vintageYear = parseInt(String(req.params.vintageYear));
 
+  if (isNaN(wineId) || isNaN(vintageYear)) {
+    return res.status(400).json({ error: 'wineId and vintageYear must be numbers' });
+  }
+
   const enrichment = await prisma.remiEnrichment.findUnique({
     where: { wineId_vintageYear: { wineId, vintageYear } },
   });

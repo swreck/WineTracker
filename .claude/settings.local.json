@@ -109,7 +109,8 @@
       "Bash(launchctl load:*)",
       "Bash(launchctl list:*)",
       "Bash(do curl:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(do)"
     ]
   }
 }
