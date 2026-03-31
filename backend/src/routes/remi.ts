@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { enrichWineVintage, generateSuggestions, chatWithRemi, findThemes } from '../services/remi';
+import { enrichWineVintage, generateSuggestions, chatWithRemi, findThemes, suggestBoxTheme, draftCaseEmail } from '../services/remi';
 
 const router = Router();
 
@@ -196,6 +196,48 @@ router.post('/themes', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error finding themes:', error);
     res.status(500).json({ error: 'Failed to find themes' });
+  }
+});
+
+// ===== CASE BUILDER =====
+
+// Suggest themes for a case box based on its wines
+router.post('/case-suggest-theme', async (req: Request, res: Response) => {
+  const prisma: PrismaClient = req.app.locals.prisma;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'AI service not configured' });
+
+  const { wines } = req.body;
+  if (!wines || !Array.isArray(wines)) {
+    return res.status(400).json({ error: 'wines array is required' });
+  }
+
+  try {
+    const themes = await suggestBoxTheme(prisma, apiKey, wines);
+    res.json({ themes });
+  } catch (error) {
+    console.error('Error suggesting box theme:', error);
+    res.status(500).json({ error: 'Failed to suggest theme' });
+  }
+});
+
+// Draft an email to Gerald from case boxes
+router.post('/case-email', async (req: Request, res: Response) => {
+  const prisma: PrismaClient = req.app.locals.prisma;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'AI service not configured' });
+
+  const { boxes, revision } = req.body;
+  if (!boxes || !Array.isArray(boxes) || boxes.length === 0) {
+    return res.status(400).json({ error: 'boxes array is required' });
+  }
+
+  try {
+    const email = await draftCaseEmail(prisma, apiKey, boxes, revision);
+    res.json({ email });
+  } catch (error) {
+    console.error('Error drafting case email:', error);
+    res.status(500).json({ error: 'Failed to draft email' });
   }
 });
 

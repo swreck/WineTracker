@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../api/client';
 import type { Wine } from '../api/client';
+import CaseBuilder from '../components/CaseBuilder';
+import type { CaseBuilderHandle } from '../components/CaseBuilder';
 
 interface Props {
   onSelectWine: (id: number) => void;
@@ -11,6 +13,14 @@ export default function NextCase({ onSelectWine }: Props) {
   const [loading, setLoading] = useState(true);
   const [minRating, setMinRating] = useState(7.0);
   const [colorFilter, setColorFilter] = useState('');
+  const [sortField, setSortField] = useState<'name' | 'vintage' | 'rating' | 'price'>('rating');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [caseBuilderOpen, setCaseBuilderOpen] = useState(false);
+  const [addedFlash, setAddedFlash] = useState<number | null>(null);
+  const caseBuilderRef = useRef<CaseBuilderHandle>(null);
+
+  // Track which wine IDs are already in case boxes
+  const [wineIdsInCases, setWineIdsInCases] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     loadFavorites();
@@ -28,6 +38,45 @@ export default function NextCase({ onSelectWine }: Props) {
       // Silent
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Sorting
+  function sortWines(wines: Wine[]): Wine[] {
+    const sorted = [...wines];
+    sorted.sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'name':
+          cmp = a.name.localeCompare(b.name);
+          break;
+        case 'vintage': {
+          const aYear = a.vintages?.map(v => v.vintageYear).sort((x, y) => y - x)[0] || 0;
+          const bYear = b.vintages?.map(v => v.vintageYear).sort((x, y) => y - x)[0] || 0;
+          cmp = aYear - bYear;
+          break;
+        }
+        case 'rating':
+          cmp = (a.averageRating || 0) - (b.averageRating || 0);
+          break;
+        case 'price': {
+          const aPrice = getLatestPrice(a) || 0;
+          const bPrice = getLatestPrice(b) || 0;
+          cmp = aPrice - bPrice;
+          break;
+        }
+      }
+      return sortDir === 'desc' ? -cmp : cmp;
+    });
+    return sorted;
+  }
+
+  function toggleSort(field: typeof sortField) {
+    if (sortField === field) {
+      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir(field === 'name' ? 'asc' : 'desc');
     }
   }
 
@@ -105,150 +154,219 @@ export default function NextCase({ onSelectWine }: Props) {
     return note.slice(0, maxLen).replace(/\s+\S*$/, '') + '...';
   }
 
-  return (
-    <div className="next-case">
-      <h2 className="page-title">Next Case</h2>
+  // Handle wine card tap — in case builder mode, add to case; otherwise navigate
+  function handleWineCardTap(wine: Wine) {
+    if (caseBuilderOpen && caseBuilderRef.current) {
+      caseBuilderRef.current.addWine(wine);
+      setAddedFlash(wine.id);
+      setTimeout(() => setAddedFlash(null), 400);
+    } else {
+      onSelectWine(wine.id);
+    }
+  }
 
-      {/* Favorites as launchpad */}
-      <section className="nc-section">
-        <h3 className="nc-section-title">Your Favorites</h3>
-        <div className="nc-filters">
-          <label className="nc-rating-filter">
-            Min rating:
-            <select
-              value={minRating}
-              onChange={(e) => setMinRating(parseFloat(e.target.value))}
-            >
-              {[6, 6.5, 7, 7.5, 8, 8.5, 9].map(r => (
-                <option key={r} value={r}>{r}+</option>
-              ))}
-            </select>
-          </label>
-          <select
-            value={colorFilter}
-            onChange={(e) => setColorFilter(e.target.value)}
-            className="nc-color-filter"
+  // Build a price lookup for CaseBuilder
+  const priceLookup = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const wine of wines) {
+      const price = getLatestPrice(wine);
+      if (price) map.set(wine.id, price);
+    }
+    return map;
+  }, [wines]);
+
+  const sortedWines = sortWines(wines);
+
+  return (
+    <div className={`next-case ${caseBuilderOpen ? 'nc-builder-active' : ''}`}>
+      <div className="nc-top-section">
+        <div className="nc-title-row">
+          <h2 className="page-title">Next Case</h2>
+          <button
+            className={`cb-toggle-btn ${caseBuilderOpen ? 'cb-toggle-active' : ''}`}
+            onClick={() => setCaseBuilderOpen(!caseBuilderOpen)}
           >
-            <option value="">All Colors</option>
-            <option value="red">Red</option>
-            <option value="white">White</option>
-            <option value="rose">Rosé</option>
-            <option value="sparkling">Sparkling</option>
-          </select>
+            {caseBuilderOpen ? 'Close Builder' : 'Build a Case'}
+          </button>
         </div>
 
-        {loading ? (
-          <p className="nc-loading">Loading favorites...</p>
-        ) : wines.length === 0 ? (
-          <p className="nc-empty">No wines at this rating threshold.</p>
-        ) : (
-          <div className="wine-cards">
-            {wines.map((wine) => {
-              const price = getLatestPrice(wine);
-              const note = getLatestNote(wine);
-              return (
-                <div
-                  key={wine.id}
-                  className={`wine-card card-tint-${wine.color}`}
-                  onClick={() => onSelectWine(wine.id)}
-                >
-                  <div className="wine-card-header">
-                    <span className="wine-name-serif">{wine.name}</span>
-                  </div>
-                  <div className="wine-card-meta">
-                    {wine.vintages && wine.vintages.length > 0 && (
-                      <span className="wine-card-vintage">
-                        {wine.vintages.map(v => v.vintageYear).sort((a, b) => b - a).slice(0, 2).join(', ')}
-                      </span>
-                    )}
-                    {wine.averageRating && (
-                      <span className="wine-card-rating">{wine.averageRating.toFixed(1)}</span>
-                    )}
-                    {price && <span className="wine-card-price">${price}</span>}
-                  </div>
-                  {note && <p className="wine-card-note">{truncateNote(note)}</p>}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Find Themes via Remi */}
-        {wines.length >= 4 && (
-          <>
-            <button
-              className="nc-find-themes-btn"
-              onClick={handleFindThemes}
-              disabled={themesLoading}
+        {/* Favorites as launchpad */}
+        <section className="nc-section">
+          <h3 className="nc-section-title">
+            {caseBuilderOpen ? 'Tap to add to case' : 'Your Favorites'}
+          </h3>
+          <div className="nc-filters">
+            <label className="nc-rating-filter">
+              Min:
+              <select
+                value={minRating}
+                onChange={(e) => setMinRating(parseFloat(e.target.value))}
+              >
+                {[6, 6.5, 7, 7.5, 8, 8.5, 9].map(r => (
+                  <option key={r} value={r}>{r}+</option>
+                ))}
+              </select>
+            </label>
+            <select
+              value={colorFilter}
+              onChange={(e) => setColorFilter(e.target.value)}
+              className="nc-color-filter"
             >
-              {themesLoading ? 'Remi is analyzing...' : 'Find Case Themes'}
-            </button>
-            {themes.length > 0 && (
-              <div className="nc-themes">
-                {themes.map((theme, i) => (
-                  <div key={i} className="nc-theme-card">
-                    <h4 className="nc-theme-name">{theme.theme}</h4>
-                    <p className="nc-theme-desc">{theme.description}</p>
-                    <div className="nc-theme-wines">
-                      {theme.wines.map((w, j) => (
-                        <span key={j} className="nc-theme-wine">{w}</span>
-                      ))}
+              <option value="">All Colors</option>
+              <option value="red">Red</option>
+              <option value="white">White</option>
+              <option value="rose">Ros&eacute;</option>
+              <option value="sparkling">Sparkling</option>
+            </select>
+          </div>
+          {/* Sort chips — own row for breathing room on mobile */}
+          <div className="nc-sort-row">
+            {(['rating', 'vintage', 'price', 'name'] as const).map(field => (
+              <button
+                key={field}
+                className={`nc-sort-chip ${sortField === field ? 'nc-sort-chip-active' : ''}`}
+                onClick={() => toggleSort(field)}
+              >
+                {field === 'name' ? 'A-Z' : field.charAt(0).toUpperCase() + field.slice(1)}
+                {sortField === field && (
+                  <span className="nc-sort-arrow">{sortDir === 'desc' ? ' \u2193' : ' \u2191'}</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {loading ? (
+            <p className="nc-loading">Loading favorites...</p>
+          ) : sortedWines.length === 0 ? (
+            <p className="nc-empty">No wines at this rating threshold.</p>
+          ) : (
+            <div className={`wine-cards ${caseBuilderOpen ? 'wine-cards-compact' : ''}`}>
+              {sortedWines.map((wine) => {
+                const price = getLatestPrice(wine);
+                const note = getLatestNote(wine);
+                const isFlashing = addedFlash === wine.id;
+                const isInCase = caseBuilderOpen && wineIdsInCases.has(wine.id);
+                return (
+                  <div
+                    key={wine.id}
+                    className={`wine-card card-tint-${wine.color} ${caseBuilderOpen ? 'wine-card-addable' : ''} ${isFlashing ? 'wine-card-added-flash' : ''} ${isInCase ? 'wine-card-in-case' : ''}`}
+                    onClick={() => handleWineCardTap(wine)}
+                  >
+                    <div className="wine-card-header">
+                      <span className="wine-name-serif">{wine.name}</span>
+                      {caseBuilderOpen && (
+                        <span className={`wine-card-add-icon ${isInCase ? 'wine-card-check-icon' : ''}`}>
+                          {isInCase ? '\u2713' : '+'}
+                        </span>
+                      )}
                     </div>
+                    <div className="wine-card-meta">
+                      {wine.vintages && wine.vintages.length > 0 && (
+                        <span className="wine-card-vintage">
+                          {wine.vintages.map(v => v.vintageYear).sort((a, b) => b - a).slice(0, 2).join(', ')}
+                        </span>
+                      )}
+                      {wine.averageRating && (
+                        <span className="wine-card-rating">{wine.averageRating.toFixed(1)}</span>
+                      )}
+                      {price && <span className="wine-card-price">${price}</span>}
+                    </div>
+                    {!caseBuilderOpen && note && <p className="wine-card-note">{truncateNote(note)}</p>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Find Themes via Remi */}
+          {!caseBuilderOpen && wines.length >= 4 && (
+            <>
+              <button
+                className="nc-find-themes-btn"
+                onClick={handleFindThemes}
+                disabled={themesLoading}
+              >
+                {themesLoading ? 'Remi is analyzing...' : 'Find Case Themes'}
+              </button>
+              {themes.length > 0 && (
+                <div className="nc-themes">
+                  {themes.map((theme, i) => (
+                    <div key={i} className="nc-theme-card">
+                      <h4 className="nc-theme-name">{theme.theme}</h4>
+                      <p className="nc-theme-desc">{theme.description}</p>
+                      <div className="nc-theme-wines">
+                        {theme.wines.map((w, j) => (
+                          <span key={j} className="nc-theme-wine">{w}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </section>
+
+        {/* Want to Try */}
+        {!caseBuilderOpen && (
+          <section className="nc-section">
+            <button
+              className="nc-section-toggle"
+              onClick={() => setShowWantToTry(!showWantToTry)}
+            >
+              <h3 className="nc-section-title">Want to Try ({wantToTry.length})</h3>
+              <span className="toggle-indicator">{showWantToTry ? '\u25BC' : '\u25B6'}</span>
+            </button>
+
+            {showWantToTry && (
+              <div className="nc-want-to-try">
+                {wantToTry.map((item) => (
+                  <div key={item.id} className="nc-want-item">
+                    <div>
+                      <span className="wine-name-serif">{item.name}</span>
+                      {item.note && <p className="nc-want-note">{item.note}</p>}
+                    </div>
+                    <button className="remove-item-btn" onClick={() => removeWantToTry(item.id)}>&#10005;</button>
                   </div>
                 ))}
+                <div className="nc-want-add">
+                  <input
+                    type="text"
+                    value={newWantName}
+                    onChange={(e) => setNewWantName(e.target.value)}
+                    placeholder="Wine name"
+                    className="nc-want-input"
+                  />
+                  <input
+                    type="text"
+                    value={newWantNote}
+                    onChange={(e) => setNewWantNote(e.target.value)}
+                    placeholder="Why? (optional)"
+                    className="nc-want-input nc-want-note-input"
+                  />
+                  <button
+                    className="nc-want-add-btn"
+                    onClick={addWantToTry}
+                    disabled={!newWantName.trim()}
+                  >
+                    Add
+                  </button>
+                </div>
               </div>
             )}
-          </>
+          </section>
         )}
-      </section>
+      </div>
 
-      {/* Want to Try */}
-      <section className="nc-section">
-        <button
-          className="nc-section-toggle"
-          onClick={() => setShowWantToTry(!showWantToTry)}
-        >
-          <h3 className="nc-section-title">Want to Try ({wantToTry.length})</h3>
-          <span className="toggle-indicator">{showWantToTry ? '▼' : '▶'}</span>
-        </button>
-
-        {showWantToTry && (
-          <div className="nc-want-to-try">
-            {wantToTry.map((item) => (
-              <div key={item.id} className="nc-want-item">
-                <div>
-                  <span className="wine-name-serif">{item.name}</span>
-                  {item.note && <p className="nc-want-note">{item.note}</p>}
-                </div>
-                <button className="remove-item-btn" onClick={() => removeWantToTry(item.id)}>✕</button>
-              </div>
-            ))}
-            <div className="nc-want-add">
-              <input
-                type="text"
-                value={newWantName}
-                onChange={(e) => setNewWantName(e.target.value)}
-                placeholder="Wine name"
-                className="nc-want-input"
-              />
-              <input
-                type="text"
-                value={newWantNote}
-                onChange={(e) => setNewWantNote(e.target.value)}
-                placeholder="Why? (optional)"
-                className="nc-want-input nc-want-note-input"
-              />
-              <button
-                className="nc-want-add-btn"
-                onClick={addWantToTry}
-                disabled={!newWantName.trim()}
-              >
-                Add
-              </button>
-            </div>
-          </div>
-        )}
-      </section>
+      {/* Case Builder panel */}
+      {caseBuilderOpen && (
+        <CaseBuilder
+          ref={caseBuilderRef}
+          onClose={() => setCaseBuilderOpen(false)}
+          onWineIdsChange={setWineIdsInCases}
+          priceLookup={priceLookup}
+        />
+      )}
     </div>
   );
 }

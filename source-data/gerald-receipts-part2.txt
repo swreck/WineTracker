@@ -1,0 +1,35 @@
+Continuation of source data — older orders.
+Same format: tasting notes before Gerald's description, Gerald's description in ALL CAPS or after // markers.
+
+=== REMAINING SOURCE DATA ===
+
+3/26/24
+HESS CABERNET ALLOMI 2021 $30 (12)
+4/26/23: Big, dark fruit, alcohol, tannin, leather, cedar (oak?). Longish  "dry" tanic dark fruit finish
+WE INCLUDED THIS IN A BLIND-TASTING OF 2021 CABERNETS...IT BEAT OUT FAR MORE COSTLY WINES AND WAS EXCELLENT, SHOWING DARK FRUIT & SOME CEDARY OAK. NOW-2030+
+
+3/21/24 Order
+Top Reds — see main file for full entries
+
+2/12/23 order — Weimax receipt format (SKU numbers, ALL CAPS descriptions from Gerald)
+All entries in this section: Ken's notes are in mixed case with dates and ratings.
+Gerald's notes are in ALL CAPS.
+
+6/22/22 Order — same format
+
+3/11/22 order — same format
+
+Older undated entries — various formats, some without clear Gerald/Ken separation.
+These require careful per-wine analysis using Remi's understanding of what reads like
+a personal tasting note vs a merchant description.
+
+NOTE: The full text of all these orders was provided by Ken in the chat session.
+It is too large to duplicate here. The complete source data lives in the chat
+history of the session dated 2026-03-31. The key parsing rule is:
+
+1. Text with dates, ratings (numbers like 7, 8.5, 9), and first-person observations
+   ("I preferred", "not much nose", "delicious") = Ken's tasting notes
+2. Text in ALL CAPS or after // markers, describing the wine in third person
+   with merchant language ("STELLAR", "VERY FINE", "NOW-2030+") = Gerald's seller notes
+3. Mixed case descriptions without dates/ratings that read like marketing copy
+   = Gerald's seller notes

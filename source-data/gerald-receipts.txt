@@ -1,0 +1,235 @@
+This file contains Ken's original semi-structured wine purchase data from Gerald (Weimax).
+Format: Purchase date headers, wine entries with name/vintage/price/quantity,
+Ken's tasting notes (with dates and ratings), and Gerald's seller descriptions after // markers.
+
+The purpose of this file is to serve as ground truth for auditing the database:
+- Text before // is Ken's tasting notes (should be in tastingEvents.notes)
+- Text after // is Gerald's description (should be in vintage.sellerNotes)
+- Some wines were imported with these mixed up (e.g., AALTO has Ken's notes stored as Gerald's)
+
+See the task list in next-session-tasks.md for what to do with this data.
+
+=== RAW SOURCE DATA BELOW ===
+
+10/14/25 Mid-range unusual whites, reds
+
+
+Delille Chaleur White 2022 $40 (3)
+2/11/26: 8.5 big, lightly tart, mineral, peach, viscous. Light smooth tart finish.
+11/13/25:  8.5. big viscous tart honey, tart bitter finish. Bit of oak & cedar? Clean elegant.  Light smooth finish.
+//
+We're fans of Smith Haut Lafitte's white wine, but at $100+ a bottle, it's a luxury. The new Chaleur Blanc has a mild herbal note and some oak. Dry. //
+
+Quivira Fig Tree 2022 $29 (3)
+2/1/26: 8. Light mineral nose.  Light weight Burgundian. Lightly tart. Mineral. Great for sauv blanc. A little tropical but too covered by acid.
+10/24/25: 7. Tart light nose. Floral almost bitter start. Interesting tart finish. Soil.. Best California sav blanc? But just ok. Good with food as planned.
+10/25/25: same
+//
+From a special site in Sonoma's Dry Creek Valley, this has a bit of the aromatic "musqué" clone of Sauvignon. Lime, mildly herbal, a hint of wood. //
+
+Velenosi Pecorino 2024 $20 (3)
+
+//
+Le Marche is off the beaten path for many, but it's a top source for good, well-priced wines such as this stellar dry white. Exotic fruit, no oak, fresh. //
+
+Vietti Roero Arneis 2023 $29 (3)
+11/22/25: 8. nice fruity tropical nose. peach, floral, pineapple, tropical.  Slightly Effervescent. Maybe too candy-like. Nice lingering candy tart finish.
+10/24/25:  8. light fruit nose. Tons of unusual berries, peach. Tropical, not tart. Honey. Like an adult punch. Nice peach apricot finish. Unusual.
+
+//
+Vietti is a leader Arneis producer, making a floral and dry white wine. This sets up reds beautifully and is a delicious seafood or cocktail white. //
+
+Cru Chardonnay 2023 $47 (2)
+//
+A ringer for top French white Burgundy! Toasty, creamy, dry, and very complex. These guys know what they're doing. This is exceptional. Lightly oaked. //
+
+Green & Red Chiles Canyon Zinfandel 2021 $32 (2)
+//
+The Chiles Canyon bottling of Zin from this vintage caught our attention. Mildly spicy notes with a nice woodsy tone. Showy in its youth through 2030. //
+
+Toma Mendo Pinot Noir 2021 $40 (2)
+//
+A tiny Pinot specialist making wines in fog-affected sites (Tomaq is an Indian word for fog). Medium-bodied with great red fruit and some sweet oak. Fine. //
+
+Titus Napa Cabernet 2022 $55 (4)
+1/8/26: 8. Red fruit, alc nose. Tart tannins. Med body.    Red candied cherries—a bit too much. Soft texture. Rich and varied
+//
+The 2021 Titus is a showy Napa Cabernet with dark blackberry-like fruit and sweet French oak fragrances. Drinkable now, can be kept 5–10 years if you like. //
+
+Pintas Character 2021 $40 (2)
+10/24/25: 8. light deep dark fruit earthy nose.  Moderately Big, light tannin, dark fruit, chocolate. Nice.
+//
+From 30-year-old vines, this is a top Douro Valley field-blend red: Touriga Franca, Touriga Nacional, Tinta Roriz. Big, plummy, mildly woodsy, dark fruit. //
+
+
+
+4/4/25 EU Tariff order
+Cellar worthy reds
+5/17/25 after Napa: 9. Medium cooked blueberries and strawberries, nose. Alcohol, tannin, cooked blueberries, dark cherry. Long, lingering Tanic dark fruit finish. Very big overall and good.
+Larkmead Cabernet 2021 $100 (Regular $125)
+The 2021 Larkmead is already a showy wine & it can age a bit, too. Medium-bodied. It's got currants & tobacco. Light wood.
+
+Nino Negri Sfursat 5stelle 2018 $99 (Regular $110)
+Few American wine connoisseurs know this special bottling from Italy's Valtellina region. It's the opus one of Sfursat wines. Mildly oaked Nebbiolo. Now–2035+.
+
+San Polino Brunello Monta 2016 $100 (Regular $115)
+—
+
+Shypoke Cabernet 2019 $65 (Regular $65)
+1/22/26: 8.4. nice dark fruit cinnamon nose.  earth cedar leather earth. Light to medium body. Lingering earthy leather finish.
+1/8/26: 8.5. dark earthy leather. A little one note, but a good note.
+11/29/25: 8.5. medium leather, dark fruit, alcohol, nose. Hot high alcohol, lots of leather, barnyard, dark fruit, soil. Light lingering earthy finish.
+From a small vineyard parcel in northern Napa, Calistoga. There's a light touch of oak to the full-bodied red. Balanced & drinkable. Now–2035+.
+
+Alion Ribera del Duero 2019 $125 (Regular $140)
+9/25: 7.5.   Dusty medium red and dark fruit nose. Tart, sharp, dark fruit, dust, cedar wood, tannin. Opens to softer bigger flavors in glass.
+Alion is a stellar red from the Vega Sicilia crew in Ribera del Duero. '19 is as intense as a good cabernet, with lots of dark plum & some cedary oak.
+
+Hashima Gevrey Chambertin 2021 $100 (Regular $115)
+9/25: 8.5. Light Pinot noir fruit nose. Super soft body, tannin, dark red fruit (cherry?), light wood, light good acid, slight expansiveness. Lingering red and dark dusty fruit finish.
+Vigneron Mark Hashima hails from Australia & is making some brilliant French reds. A dark cherry fruit, front & center with a whiff of oak in the back. Elegant.
+
+Paradigm Napa Cabernet 2019 $90 (Regular $100)
+From an exceptional estate in Napa's Oakville area. This is a classic cab with dark fruit, moderate tannin & a touch of wood. Best now–2025+.
+
+Roty Gevrey Chambertin 2020 $87 (Regular $110)
+Roty makes grand red Burgundies. This is a mildly smoky Gevrey, showing medium body and dark cherry pinot fruit with a hint of oak. Very fine. Now–2030+.
+
+Saint Pierre St Julien 2019 $85 (Regular $95)
+7/26/25:8. medium solid low dark fruit nose. Big, tannin, leather, medium alcohol. Not as expansive as last time. Nice moderate dark fruit finish.
+7/5/25: 9. Little nose (cold). Giant, expansive, soft, balanced, leather, soul, dark fruit, wood. Slightly tart big dark fruit lingering finish.  (Balance great but may seem thinner later)
+Saint Pierre has been making some rather flashy cabernet-based wines and this '19 is excellent. Dark berry fruits and some wood spice notes. Drinkable now–2040.
+
+Paitin Barbaresco RSVG 2016 $100 (Regular $125)
+The Pasquero family make excellent wines in the Barbaresco area. This is an old vines bottling. Exceptional. From the famed Serraboella site. Now–2035+.
+
+Roc de Cames 2020 $85 (Regular $95)
+Roc de Cames is perhaps the top estate in the Cotes de Bourg (across the river from Fronsac). Merlot-based and nicely oaked. Very showy. Best now–2032+.
+
+Areietta Quartet 2022 $90 (Regular $100)
+Cool climate vineyards in southern Napa produce nice elegant cabernet fruit for this Bordeaux-styled blend. A nice touch of cedary oak adds complexity.
+
+Italian/Iberian
+Pojer & Sandri Rosso F 2017 $54 (Regular $60)
+5/25: 7. Bright red fruit nose. Light to medium body tart, red and dark fruit. some wood.  Probably wouldn't get again.
+A showy Trentino rendition of a Bordeaux blend, but the twist is the addition of the local grape Lagrein. Nice oak. Competes well with local Cabernets. Yum!
+
+Velenosi Ninfa Rosso 2021 $31 (Regular $35)
+5/25: 7.5. Mild but heavy dark nose. Medium almost viscous body, dark fruit, ending tannin. Light tartness. Cedar. Simple. Brief good finish. Good Value?
+This is a great introduction to Italian wines for California palates. It's a blend featuring Montepulciano with Cab, Merlot & Syrah. Nice oak, too! Delicious.
+
+Rioja Alta Ardanza 2016 $40 (Regular $45)
+La Rioja Alta is one of the benchmark estates in Rioja. Ardanza is a special bottling showing lovely woodsy, oak notes. Best now–2030, or so. Very fine.
+
+Pintas Character 2021 $80 (Regular $90)
+5/25: 8. light alcohol and dark fruit nose. Big, dark fruit, leather, light wood, tannin. Light body. Soft, easy to drink.  Light nice dark fruit tan, and finish.
+From 30 year old vines, this is a top Douro Valley field blend red: Touriga Franca, Touriga Nacional, Tinta Roriz… Big, plummy, mildly woodsy/dark fruit.
+
+La Vigna di San Martino 2020 $45 (Regular $50)
+6/25: 8.5. Big earthy, dark fruit nose. Giant expensive dark fruit flavors good balance. Delicious. Bit of tartness detracts. Big tannins. Long tart red fruit finish.
+Made by a fellow who's a consulting winemaker, he has maybe a hectare of Sangiovese to produce this stellar Chianti Riserva. Very fine! Now–2033+
+
+Esporão Reserva Red 2020 $23 (Regular $26)
+2021 6/25: 7.5.  Light red fruit nose. Light but flavorful, red fruit, soil, oak, light tannin, nice balance. Simple good.  Light lingering finish. .
+Modern winemaking in Portugal. Team Esporão's dynamic red is nicely oaked and a medium-full bodied wine able to stand up to grilled or roasted meats.
+
+Quinta Bacalhôa CSM 2017 $32 (Regular $36)
+This famous estate south of Lisbon grows Cabernet and Merlot. This is a top quality Portuguese red… deep and rich. Decant & air for an hour… Now–2028+
+
+Rampolla Chianti 2019 $38 (Regular $42)
+This is a famous estate in Panzano and their Chianti wines are noted for having good structure and cellarability. This is nice now–2032+. Red meats.
+
+Pradihnos (sic, Pradinhos) Grande Reserva 2015 $45 (Regular $50)
+7/20/25: 8.5. Big dark fruit, leathery nose. Taste follows nose. Earthy deep, dark fruit leather, cedar. Medium body medium alcohol pleasant tartness.  almost expansive. Big tannin. Lingering ok tart earthy cedar finish.
+Beautifully robust with lots of dark fruit (Cabernet & Touriga Nacional). This was matured in small oak barrels with the wood giving a cedary note. Fine.
+
+Baricci Rosso di Montalcino 2022 $40 (Regular $48)
+The Mongioli hill in Montalcino is regarded as a Grand Cru site. Baricci, a small estate, makes an unusually good Rosso. 2022 being excellent.
+
+LaVigna Taurasini 2019 $29 (Regular $33)
+Made entirely of Aglianico. I preferred this to their more costly Taurasi. Aged in small oak, medium-full bodied & ready to drink. Mild tannins. Red meats?
+
+EU Whites
+Collet Chablis Butteaux 2020 $40 (Regular $45)
+From an organic vineyard planted in 1972. This site has lots of limestone giving the wine a good chalky, minerally character. Delicious. Appley.
+
+Pommier Chablis 2022 $37 (Regular $41)
+It's a bit risky trying to farm organically in Chablis, but this mom & pop team do a good job in the vineyards & cellar. Aged on the lees. Nice!
+
+Raffaitin-Planchon Sancerre 2022 $27 (Regular $30)
+Showing a ripe, peachy character on the nose with good, citrusy Sauvignon flavor. This comes from a tiny domaine in the town of Sancerre. Very fine.
+
+Pascal Chablis 1er Cru 2022 $40 (Regular $45)
+From the premier cru site of Fourchaume, this is a dry, crisp, appley Chablis. A hint of citrus and some stony notes. Plus a sensible price makes this a buy!
+
+Grande Maison Sancerre 2023 $22 (Regular $25)
+A small estate in Sancerre. This is a crisp, bone dry Sauvignon Blanc. Best with seafood or goat cheese. Serve lightly chilled.
+
+Crochet Sancerre Croq' RY 2022 $40 (Regular $45)
+Crochet blends fruit from a few sites to make his most intense Sancerre. South-east facing vineyards. No oak & bottled after a year in tank. Dry & crisp.
+
+Bailly Sancerre 2023 $27 (Regular $30)
+Bone dry, crisp, minerally Sancerre with textbook Sauvignon Blanc aromas and flavors. Bailly is a smallish, family-run estate… Good quality/price.
+
+Mellot Sancerre Moussai 2023 $33 (Regular $37)
+Mellot is a famous Sancerre producer. This 2023 is a delight, classic in style with crisp acidity and no oak. Citrusy & stoney. Best lightly chilled.
+
+Jacot Pouilly-Fuissé 1er 2021 $54 (Regular $60)
+A surprisingly serious French white Burgundy from a premier cru site in the Macon region. Far more serious of a Chardonnay, mildly toasty & dry.
+
+Niot Viré-Clessé Chardonnay 2022 $33 (Regular $37)
+From a tiny cellar in Burgundy's Côte Chalonnaise, here's a lightly oaked Chardonnay with a hint of toastiness. Dry, crisp and profound for this area.
+
+Rebourgeon Bourgogne B 2022 $27 (Regular $30)
+4/25: 7.5. bright mineral, sand. Light body. Tart but goes away quickly. Interesting balance.  Light mineral finish.
+From vines within Pommard & Meursault, this is a surprisingly complex Bourgogne Blanc. Mildly toasty, dry. About 500 new cases. Tiny production. Thoughtful.
+
+Château de Chamilly Chablis 2022 $27 (Regular $30)
+From a family domaine just north of the town of Chablis. Here's a bright, fresh, dry, non-oaked white. Lovely apple-like fruit. Best with seafood. Light chill.
+
+EU Reds
+Deauratus Cabernet Paso Robles  2023 $43 (Regular $47)
+4/25: 5. light red fruit cherry nose. Hits hard with tart red fruit strawberry cranberry. Light med body. Later in glass, less tart, more soil and cedar; still high red fruit.  Lingering tart red fruit finish. Almost candy like.
+A rare Paso Robles red that gets our attention. Hits the mark with ripe, but not jammy fruit and a nice touch of American oak. Good now–2030+.
+
+Combier Crozes Hermitage 2021 $31 (Regular $35)
+6/25: 6. Killer nose, big, dark fruit. Thin, sour, sort of dirty. Disappointing. May be what Gerald means by "olive notes," but not crazy about it. Simple, ok finish.
+Laurence Combier's Syrah shows lots of spice and olive notes. Classic Northern Rhône red, drinkable now. Best at cool cellar temp.
+
+Abadia Retuerta 2021 $45 (Regular $50)
+1/16/26: 7.5. Light nose, red fruit. Big, expansive. Cooked, jammy Red fruit/raspberry, but grounded by high alcohol, tannin.
+Much in the style of really fine red Bordeaux. A blend of Tempranillo with Cabernet and Syrah. Nicely oaked, very refined and elegant. Now–2030.
+
+Honig Napa Cabernet 2021 $50 (Regular $60)
+Honig makes stellar Napa Cabernet, mostly from Rutherford-area fruit. It's big, full-bodied and yet drinkable now. Dark fruit, nice oak. Now–2028+.
+
+Buehler Napa Cabernet 2021 $36 (Regular $40)
+2021 4/25: 8. not much nose. cooked red fruit. Cedar, pencil lead. Light Tannin.  Tart medium body. Medium tannin dark fruity finish.
+2018: 8, good, soft nose; big, expansive, super soft, leather, tannin, cedar. Lots of great flavors that are all pretty light.
+
+Buehler is a family-operated winery in the eastern hills of Napa. This is a medium-bodied, fairly supple Cabernet with a touch of oak. Drink now–2030+.
+
+Ch. Petit Serin Margaux 2020 $45 (Regular $80)
+8/25: 6.5. very light nose. Simple, light to medium body, dark fruit, soil. Brief similar ending.
+This is the smallest estate in Margaux, owned by a fellow who is actually a carpenter. Entirely Cabernet Sauvignon. Light touch of wood.
+
+Le Marquis de Calon 2020 $50 (Regular $55)
+A flashy red from a famous Bordeaux winery. I prefer this to their $200 bottles. Dark fruit and some sweet oak, plus some mouth-drying tannin. Now–2040.
+
+Grand Montmirail Gigondas 2022 $27 (Regular $32)
+7/25: 7.5. White very dark low earthy fruit nose.  Earthy, leather, low dark fruit. Sharp tannins that soften quickly. Light lingering dark fruit finish.
+
+Importer Charles Neal and winemaker Yves Cheron both have daughters named Juliette, so this 80% Grenache cuvée is named for them. Berries and spice. Yum.
+
+Crous St Martin Châteauneuf-du-Pape 2022 $40 (Regular $50)
+Based on Grenache with 10% each of Syrah and Mourvèdre. There's a purity of fruit and a touch of spice to this remarkably drinkable red. Best now–2030+. Very fine.
+
+Rioja Alta Arana Reserva 2016 $55 (Regular $62)
+We've routinely found this Viña Arana to be a classic Tempranillo with lots of American oak. The 2016 is beautifully drinkable now 'til maybe 2034+. Excellent.
+
+Le Galantin Bandol 2016 $27 (Regular $32)
+4/25: Big but simple, tons of tannin, a bit of dark fruit and soil.
+Mourvèdre is the grape of Bandol, in France's Provence. They're usually a bit expensive, but this one is a bargain. Drinkable now–2027. Lamb/duck.
+
+Ch. Beauséjour Puisseguin $27 (Regular $30)
+A special bottling made without the addition of sulfites! Surprisingly good. It's entirely Cabernet Franc. Some red fruit notes. No oak.

@@ -281,6 +281,12 @@ export const api = {
   remiFindThemes: (minRating?: number) =>
     request<{ themes: { theme: string; wines: string[]; description: string }[] }>('/remi/themes', { method: 'POST', body: JSON.stringify({ minRating }) }),
 
+  remiCaseSuggestTheme: (wines: { name: string; color: string; region?: string; vintageYear?: number }[]) =>
+    request<{ themes: string[] }>('/remi/case-suggest-theme', { method: 'POST', body: JSON.stringify({ wines }) }),
+
+  remiCaseEmail: (boxes: { theme: string; splitNote?: string; items: { name: string; vintageYear?: number; quantity: number; isLikeThis: boolean }[] }[], revision?: string) =>
+    request<{ email: string }>('/remi/case-email', { method: 'POST', body: JSON.stringify({ boxes, revision }) }),
+
   // AI
   tellMeMore: (data: { wineName: string; vintageYear?: number; color?: string; region?: string; appellation?: string; grapeVarietyOrBlend?: string }) =>
     request<{ text: string }>('/ai/tell-me-more', { method: 'POST', body: JSON.stringify(data) }),

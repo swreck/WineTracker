@@ -403,6 +403,96 @@ When Ken asks about a specific wine, use your knowledge of that wine AND his per
   return reply;
 }
 
+export async function suggestBoxTheme(
+  prisma: PrismaClient,
+  apiKey: string,
+  wines: { name: string; color: string; region?: string; vintageYear?: number }[],
+): Promise<string[]> {
+  if (wines.length === 0) return [];
+
+  const wineSummary = wines.map(w =>
+    `- ${w.name} (${w.color}${w.region ? ', ' + w.region : ''}${w.vintageYear ? ' ' + w.vintageYear : ''})`
+  ).join('\n');
+
+  const client = new Anthropic({ apiKey });
+
+  const message = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 300,
+    system: REMI_PERSONA,
+    messages: [{
+      role: 'user',
+      content: `Ken is building a wine case for his merchant Gerald. This box contains:
+
+${wineSummary}
+
+Suggest 3-4 short, specific theme names for this group of wines. Themes should be the kind of thing you'd say to a wine merchant: "Big Napa Reds", "Northern Rhône Syrahs", "Portuguese Exploration", "Cellar-Worthy Italians", etc. Be specific to the actual wines, not generic.
+
+Respond with JSON only, no markdown:
+["Theme 1", "Theme 2", "Theme 3"]`,
+    }],
+  });
+
+  const responseText = message.content[0].type === 'text' ? message.content[0].text : '[]';
+
+  try {
+    return JSON.parse(extractJSON(responseText));
+  } catch {
+    return [];
+  }
+}
+
+export async function draftCaseEmail(
+  prisma: PrismaClient,
+  apiKey: string,
+  boxes: {
+    theme: string;
+    splitNote?: string;
+    items: { name: string; vintageYear?: number; quantity: number; isLikeThis: boolean }[];
+  }[],
+  revision?: string,
+): Promise<string> {
+  const boxSummaries = boxes.map((box, i) => {
+    const itemLines = box.items.map(item => {
+      const qty = item.quantity > 1 ? ` (${item.quantity})` : '';
+      const like = item.isLikeThis ? ' [or something similar]' : '';
+      return `  - ${item.name}${item.vintageYear ? ' ' + item.vintageYear : ''}${qty}${like}`;
+    }).join('\n');
+
+    return `Case ${i + 1}: ${box.theme}${box.splitNote ? ' — ' + box.splitNote : ''}
+${itemLines || '  (theme only — Gerald picks)'}
+  Total: ${box.items.reduce((sum, item) => sum + item.quantity, 0)}/12 bottles`;
+  }).join('\n\n');
+
+  const client = new Anthropic({ apiKey });
+
+  const revisionInstruction = revision
+    ? `\n\nKen's revision request: "${revision}"\nApply this revision to the draft.`
+    : '';
+
+  const message = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 1200,
+    system: `${KENS_VOICE}
+
+You're drafting an email from Ken to Gerald at Weimax Wine. Ken and Gerald have a warm, long-standing relationship. The tone is casual, direct, appreciative — like texting a friend who happens to be your wine guy. No formality, no "Dear Gerald." Just "Gerald," or "Hey Gerald," and sign off with "Ken" or "Thanks, Ken."
+
+Keep it scannable — Gerald needs to quickly see what Ken wants. Use the case structure Ken built. If wines are marked "or something similar," mention that naturally. If a box is theme-only, say something like "your call on this one" or "whatever you think fits."`,
+    messages: [{
+      role: 'user',
+      content: `Draft an email to Gerald ordering these cases:
+
+${boxSummaries}
+
+Write the email in Ken's voice. Keep it short and scannable — Gerald is busy. Make it warm but efficient.${revisionInstruction}
+
+Return the email text only, no JSON wrapping.`,
+    }],
+  });
+
+  return message.content[0].type === 'text' ? message.content[0].text : 'Could not draft email.';
+}
+
 export async function findThemes(
   prisma: PrismaClient,
   apiKey: string,
