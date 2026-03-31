@@ -45,6 +45,43 @@ export async function enrichWineVintage(
   });
   if (existing) return existing.profile;
 
+  // Gather personal context: Gerald's notes, Ken's ratings, tasting notes, collection patterns
+  const vintage = await prisma.vintage.findFirst({
+    where: { wineId, vintageYear },
+    include: {
+      tastingEvents: { orderBy: { tastingDate: 'desc' } },
+      purchaseItems: { take: 1 },
+    },
+  });
+
+  const sellerNotes = vintage?.sellerNotes;
+  const tastings = vintage?.tastingEvents || [];
+  const ratings = tastings.map(t => Number(t.rating));
+  const avgRating = ratings.length > 0 ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : null;
+  const tastingNotes = tastings.filter(t => t.notes).map(t => t.notes!.slice(0, 100));
+  const price = vintage?.purchaseItems?.[0]?.pricePaid;
+
+  // Look for collection patterns — other wines of same color/region
+  const similarWines = await prisma.wine.findMany({
+    where: {
+      id: { not: wineId },
+      color: color as any,
+      ...(region ? { region } : {}),
+    },
+    include: {
+      vintages: {
+        include: { tastingEvents: { take: 1, orderBy: { tastingDate: 'desc' as const } } },
+      },
+    },
+    take: 5,
+  });
+
+  const similarContext = similarWines.map((w: any) => {
+    const wRatings = (w.vintages || []).flatMap((v: any) => (v.tastingEvents || []).map((t: any) => Number(t.rating)));
+    const wAvg = wRatings.length > 0 ? (wRatings.reduce((a: number, b: number) => a + b, 0) / wRatings.length).toFixed(1) : null;
+    return `${w.name} (${w.color}): avg ${wAvg || 'unrated'}`;
+  }).join('; ');
+
   const client = new Anthropic({ apiKey });
 
   const details = [
@@ -56,17 +93,29 @@ export async function enrichWineVintage(
     grape ? `Grape/Blend: ${grape}` : null,
   ].filter(Boolean).join('\n');
 
+  const personalContext = [
+    sellerNotes ? `Gerald's seller notes: "${sellerNotes}"` : null,
+    avgRating ? `Ken's average rating: ${avgRating}` : null,
+    tastingNotes.length > 0 ? `Ken's tasting notes: ${tastingNotes.map(n => `"${n}"`).join(', ')}` : null,
+    price ? `Price paid: $${price}` : null,
+    similarContext ? `Similar wines in Ken's collection: ${similarContext}` : null,
+  ].filter(Boolean).join('\n');
+
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 300,
+    max_tokens: 500,
     system: REMI_PERSONA,
     messages: [{
       role: 'user',
-      content: `Write a 2-3 sentence profile of this specific wine and vintage. What is it like? How does this vintage compare to others from this producer? Anything notable about the vintage conditions or winemaking? Be specific to this wine and year — not generic descriptions of the grape or region.
+      content: `Write a rich profile of this specific wine and vintage in two paragraphs.
+
+PARAGRAPH 1 — Your independent wine knowledge: What is this specific wine and vintage like? How does this vintage compare to others from this producer? Notable vintage conditions or winemaking approach? Be specific to this wine and year — not generic descriptions of the grape or region. If you don't have specific knowledge, say what you can honestly.
+
+PARAGRAPH 2 — Connections to Ken's world (ONLY if there is something genuinely worth saying): Connect your wine knowledge to what Gerald said, what Ken rated and noted, or patterns in Ken's collection. For example: confirm or add context to Gerald's description, note if Ken's rating aligns with or diverges from critical consensus, or observe patterns like "this is your third wine from this region and you've liked them all" or "critics love this style but your ratings suggest otherwise." Skip this paragraph entirely if there's nothing meaningful to connect.
 
 ${details}
 
-If you don't have specific knowledge of this wine, say what you can about the producer and vintage year honestly. Don't invent details.`,
+${personalContext ? `Ken's personal data:\n${personalContext}` : 'No personal data available yet.'}`,
     }],
   });
 

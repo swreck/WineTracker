@@ -192,13 +192,8 @@ router.post('/execute', async (req: Request, res: Response) => {
           : batch.purchaseDate;
       }
 
-      const purchaseBatch = await prisma.purchaseBatch.create({
-        data: {
-          purchaseDate,
-          theme: batch.theme,
-        },
-      });
-      results.purchaseBatchesCreated++;
+      // Defer purchase batch creation until we have at least one valid item
+      let purchaseBatch: any = null;
 
       for (const item of (batch.items || [])) {
         // Skip items without a name
@@ -272,6 +267,14 @@ router.post('/execute', async (req: Request, res: Response) => {
               data: { sellerNotes: item.sellerNotes },
             });
           }
+        }
+
+        // Create purchase batch lazily on first item
+        if (!purchaseBatch) {
+          purchaseBatch = await prisma.purchaseBatch.create({
+            data: { purchaseDate, theme: batch.theme },
+          });
+          results.purchaseBatchesCreated++;
         }
 
         // Create purchase item

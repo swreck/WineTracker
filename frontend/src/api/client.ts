@@ -267,6 +267,10 @@ export const api = {
     request<{ reply: string }>('/remi/chat', { method: 'POST', body: JSON.stringify({ message }) }),
   remiGetChat: () =>
     request<{ messages: { id: number; role: string; content: string; createdAt: string }[] }>('/remi/chat'),
+  remiClearChat: () =>
+    request<{ cleared: number }>('/remi/chat', { method: 'DELETE' }),
+  remiDismissSuggestion: (id: number) =>
+    request<{ dismissed: boolean }>(`/remi/suggestions/${id}`, { method: 'DELETE' }),
   remiFindThemes: (minRating?: number) =>
     request<{ themes: { theme: string; wines: string[]; description: string }[] }>('/remi/themes', { method: 'POST', body: JSON.stringify({ minRating }) }),
 

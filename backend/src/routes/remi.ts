@@ -112,6 +112,20 @@ router.get('/suggestions', async (req: Request, res: Response) => {
   res.json({ suggestions });
 });
 
+// Dismiss a single suggestion
+router.delete('/suggestions/:id', async (req: Request, res: Response) => {
+  const prisma: PrismaClient = req.app.locals.prisma;
+  const id = parseInt(String(req.params.id));
+  if (isNaN(id)) return res.status(400).json({ error: 'id must be a number' });
+
+  await prisma.remiSuggestion.update({
+    where: { id },
+    data: { active: false },
+  }).catch(() => null);
+
+  res.json({ dismissed: true });
+});
+
 // Chat with Remi
 router.post('/chat', async (req: Request, res: Response) => {
   const prisma: PrismaClient = req.app.locals.prisma;
@@ -132,13 +146,21 @@ router.post('/chat', async (req: Request, res: Response) => {
   }
 });
 
-// Get chat history
+// Get chat history (last 50 messages)
 router.get('/chat', async (req: Request, res: Response) => {
   const prisma: PrismaClient = req.app.locals.prisma;
   const messages = await prisma.remiChatMessage.findMany({
     orderBy: { createdAt: 'asc' },
+    take: 50,
   });
   res.json({ messages });
+});
+
+// Clear chat history
+router.delete('/chat', async (req: Request, res: Response) => {
+  const prisma: PrismaClient = req.app.locals.prisma;
+  const deleted = await prisma.remiChatMessage.deleteMany();
+  res.json({ cleared: deleted.count });
 });
 
 // Find themes among favorites

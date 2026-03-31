@@ -49,6 +49,15 @@ export default function RemiChat({ isOpen, onClose }: Props) {
     }
   }
 
+  async function handleClear() {
+    try {
+      await api.remiClearChat();
+      setMessages([]);
+    } catch {
+      // Silent
+    }
+  }
+
   async function handleSend() {
     if (!input.trim() || sending) return;
 
@@ -86,7 +95,12 @@ export default function RemiChat({ isOpen, onClose }: Props) {
             <span className="remi-chat-name">Remi</span>
             <span className="remi-chat-subtitle">Your wine companion</span>
           </div>
-          <button className="remi-chat-close" onClick={onClose}>×</button>
+          <div className="remi-chat-header-actions">
+            {messages.length > 0 && (
+              <button className="remi-chat-clear" onClick={handleClear} title="Start new conversation">New</button>
+            )}
+            <button className="remi-chat-close" onClick={onClose}>×</button>
+          </div>
         </div>
 
         <div className="remi-chat-messages">

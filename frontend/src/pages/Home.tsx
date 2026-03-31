@@ -147,6 +147,18 @@ export default function Home({ onSelectWine, onNavigate, onOpenChat }: Props) {
                 onClick={() => s.wineId ? onSelectWine(s.wineId) : onOpenChat()}
               >
                 <p className="remi-suggestion-text">{s.content}</p>
+                <button
+                  className="suggestion-dismiss-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    api.remiDismissSuggestion(s.id).then(() => {
+                      setSuggestions(prev => prev.filter(x => x.id !== s.id));
+                    });
+                  }}
+                  title="Dismiss"
+                >
+                  ✕
+                </button>
               </div>
             ))}
           </div>
