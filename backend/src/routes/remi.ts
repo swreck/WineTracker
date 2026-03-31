@@ -90,7 +90,7 @@ router.get('/enrichment/:wineId/:vintageYear', async (req: Request, res: Respons
     return res.status(404).json({ error: 'No enrichment found' });
   }
 
-  res.json({ profile: enrichment.profile });
+  res.json({ profile: enrichment.profile, drinkWindow: enrichment.drinkWindow, foodPairing: enrichment.foodPairing });
 });
 
 // Generate suggestions (with debounce — reject if generated within last 30 seconds)
@@ -196,6 +196,39 @@ router.post('/themes', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error finding themes:', error);
     res.status(500).json({ error: 'Failed to find themes' });
+  }
+});
+
+// ===== WANT TO TRY LIST =====
+
+router.get('/want-to-try', async (req: Request, res: Response) => {
+  const prisma: PrismaClient = req.app.locals.prisma;
+  const items = await prisma.wantToTry.findMany({ orderBy: { createdAt: 'desc' } });
+  res.json({ items });
+});
+
+router.post('/want-to-try', async (req: Request, res: Response) => {
+  const prisma: PrismaClient = req.app.locals.prisma;
+  const { name, note, theme } = req.body;
+  if (!name || typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'name is required' });
+  }
+  const item = await prisma.wantToTry.create({
+    data: { name: name.trim(), note: note?.trim() || null, theme: theme?.trim() || null },
+  });
+  res.status(201).json(item);
+});
+
+router.delete('/want-to-try/:id', async (req: Request, res: Response) => {
+  const prisma: PrismaClient = req.app.locals.prisma;
+  const id = parseInt(String(req.params.id));
+  if (isNaN(id)) return res.status(400).json({ error: 'id must be a number' });
+
+  try {
+    await prisma.wantToTry.delete({ where: { id } });
+    res.json({ deleted: true });
+  } catch {
+    res.status(404).json({ error: 'Item not found' });
   }
 });
 

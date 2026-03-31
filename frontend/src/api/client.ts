@@ -258,7 +258,7 @@ export const api = {
   remiEnrichAll: () =>
     request<{ enriched: number; skipped: number }>('/remi/enrich-all', { method: 'POST' }),
   remiGetEnrichment: (wineId: number, vintageYear: number) =>
-    request<{ profile: string }>(`/remi/enrichment/${wineId}/${vintageYear}`),
+    request<{ profile: string; drinkWindow?: string | null; foodPairing?: string | null }>(`/remi/enrichment/${wineId}/${vintageYear}`),
   remiGenerateSuggestions: () =>
     request<{ suggestions: { id: number; content: string; wineId: number | null }[] }>('/remi/suggestions', { method: 'POST' }),
   remiGetSuggestions: () =>
@@ -271,6 +271,13 @@ export const api = {
     request<{ cleared: number }>('/remi/chat', { method: 'DELETE' }),
   remiDismissSuggestion: (id: number) =>
     request<{ dismissed: boolean }>(`/remi/suggestions/${id}`, { method: 'DELETE' }),
+  remiGetWantToTry: () =>
+    request<{ items: { id: number; name: string; note?: string | null; theme?: string | null; createdAt: string }[] }>('/remi/want-to-try'),
+  remiAddWantToTry: (name: string, note?: string, theme?: string) =>
+    request<{ id: number; name: string }>('/remi/want-to-try', { method: 'POST', body: JSON.stringify({ name, note, theme }) }),
+  remiDeleteWantToTry: (id: number) =>
+    request<{ deleted: boolean }>(`/remi/want-to-try/${id}`, { method: 'DELETE' }),
+
   remiFindThemes: (minRating?: number) =>
     request<{ themes: { theme: string; wines: string[]; description: string }[] }>('/remi/themes', { method: 'POST', body: JSON.stringify({ minRating }) }),
 

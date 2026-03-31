@@ -47,29 +47,31 @@ export default function NextCase({ onSelectWine }: Props) {
     }
   }
 
-  // Want to Try list — stored in localStorage for now, will move to backend with Remi
-  const [wantToTry, setWantToTry] = useState<{ name: string; note: string }[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('wantToTry') || '[]');
-    } catch { return []; }
-  });
+  // Want to Try list — server-persisted
+  const [wantToTry, setWantToTry] = useState<{ id: number; name: string; note?: string | null }[]>([]);
   const [showWantToTry, setShowWantToTry] = useState(false);
   const [newWantName, setNewWantName] = useState('');
   const [newWantNote, setNewWantNote] = useState('');
 
-  function addWantToTry() {
+  useEffect(() => {
+    api.remiGetWantToTry().then(data => setWantToTry(data.items || [])).catch(() => {});
+  }, []);
+
+  async function addWantToTry() {
     if (!newWantName.trim()) return;
-    const updated = [...wantToTry, { name: newWantName.trim(), note: newWantNote.trim() }];
-    setWantToTry(updated);
-    localStorage.setItem('wantToTry', JSON.stringify(updated));
-    setNewWantName('');
-    setNewWantNote('');
+    try {
+      const item = await api.remiAddWantToTry(newWantName.trim(), newWantNote.trim() || undefined);
+      setWantToTry(prev => [{ id: item.id, name: item.name, note: newWantNote.trim() || null }, ...prev]);
+      setNewWantName('');
+      setNewWantNote('');
+    } catch { /* silent */ }
   }
 
-  function removeWantToTry(index: number) {
-    const updated = wantToTry.filter((_, i) => i !== index);
-    setWantToTry(updated);
-    localStorage.setItem('wantToTry', JSON.stringify(updated));
+  async function removeWantToTry(id: number) {
+    try {
+      await api.remiDeleteWantToTry(id);
+      setWantToTry(prev => prev.filter(item => item.id !== id));
+    } catch { /* silent */ }
   }
 
   function getLatestPrice(wine: Wine): number | null {
@@ -212,13 +214,13 @@ export default function NextCase({ onSelectWine }: Props) {
 
         {showWantToTry && (
           <div className="nc-want-to-try">
-            {wantToTry.map((item, i) => (
-              <div key={i} className="nc-want-item">
+            {wantToTry.map((item) => (
+              <div key={item.id} className="nc-want-item">
                 <div>
                   <span className="wine-name-serif">{item.name}</span>
                   {item.note && <p className="nc-want-note">{item.note}</p>}
                 </div>
-                <button className="remove-item-btn" onClick={() => removeWantToTry(i)}>✕</button>
+                <button className="remove-item-btn" onClick={() => removeWantToTry(item.id)}>✕</button>
               </div>
             ))}
             <div className="nc-want-add">

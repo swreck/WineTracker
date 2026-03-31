@@ -85,7 +85,7 @@ export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAbout
   const [showVintagePicker, setShowVintagePicker] = useState(false);
 
   // Remi enrichment profiles (loaded per vintage)
-  const [enrichments, setEnrichments] = useState<Record<string, string>>({});
+  const [enrichments, setEnrichments] = useState<Record<string, { profile: string; drinkWindow?: string | null; foodPairing?: string | null }>>({});
 
   async function handleTellMeMore(vintageYear?: number) {
     if (!wine) return;
@@ -154,7 +154,7 @@ export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAbout
         const key = `${wine.id}-${v.vintageYear}`;
         if (!enrichments[key]) {
           api.remiGetEnrichment(wine.id, v.vintageYear)
-            .then(data => setEnrichments(prev => ({ ...prev, [key]: data.profile })))
+            .then(data => setEnrichments(prev => ({ ...prev, [key]: { profile: data.profile, drinkWindow: data.drinkWindow, foodPairing: data.foodPairing } })))
             .catch(() => {}); // Silent — enrichment is optional
         }
       }
@@ -458,10 +458,15 @@ export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAbout
     sourceCustom: v.sourceCustom,
   })) || [];
 
-  const allEnrichmentTexts = wine?.vintages?.map(v => ({
-    vintageYear: v.vintageYear,
-    profile: enrichments[`${wine.id}-${v.vintageYear}`] || null,
-  })).filter(e => e.profile) || [];
+  const allEnrichmentTexts = wine?.vintages?.map(v => {
+    const e = enrichments[`${wine.id}-${v.vintageYear}`];
+    return {
+      vintageYear: v.vintageYear,
+      profile: e?.profile || null,
+      drinkWindow: e?.drinkWindow || null,
+      foodPairing: e?.foodPairing || null,
+    };
+  }).filter(e => e.profile) || [];
 
   if (loading) return <div className="loading">Loading wine...</div>;
   if (error && !wine) return <div className="error">{error}</div>;
@@ -673,10 +678,16 @@ export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAbout
                   <div className="remi-enrichment-header">
                     <span className="remi-profile-label">Remi</span>
                     <span className="remi-enrichment-vintage">{e.vintageYear}</span>
+                    {e.drinkWindow && <span className="remi-drink-window">{e.drinkWindow}</span>}
                   </div>
                   {e.profile!.split('\n\n').map((p, j) => (
                     <p key={j} className="remi-paragraph">{p}</p>
                   ))}
+                  {e.foodPairing && (
+                    <div className="remi-food-pairing">
+                      <span className="remi-pairing-label">Pairs with:</span> {e.foodPairing}
+                    </div>
+                  )}
                 </div>
               ))
             ) : aiLoading ? (

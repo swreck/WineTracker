@@ -28,6 +28,9 @@ export default function QuickTasting({ onCancel, preselectedWine, preselectedVin
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const [lastSavedTastingId, setLastSavedTastingId] = useState<number | null>(null);
+  const [showUndo, setShowUndo] = useState(false);
+  const [undoTimer, setUndoTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   // Compare mode
   const [compareMode, setCompareMode] = useState(false);
@@ -153,15 +156,26 @@ export default function QuickTasting({ onCancel, preselectedWine, preselectedVin
     try {
       setSaving(true);
       setError(null);
-      await api.createTasting({
+      const tasting = await api.createTasting({
         vintageId: selectedVintage.id,
         tastingDate: new Date().toISOString().split('T')[0],
         rating,
         notes: notes || undefined,
       });
+      setLastSavedTastingId(tasting.id);
       setSuccess(true);
+      setShowUndo(true);
       // Refresh recent wines and reset for another entry
       loadRecentWines();
+
+      // Clear undo after 4 seconds
+      if (undoTimer) clearTimeout(undoTimer);
+      const timer = setTimeout(() => {
+        setShowUndo(false);
+        setLastSavedTastingId(null);
+      }, 4000);
+      setUndoTimer(timer);
+
       setTimeout(() => {
         setSelectedWine(null);
         setSelectedVintage(null);
@@ -596,6 +610,22 @@ export default function QuickTasting({ onCancel, preselectedWine, preselectedVin
       >
         {saving ? 'Saving...' : rating !== null ? `Save ${ratingLabel}` : 'Tap to rate'}
       </button>
+
+      {/* Undo toast */}
+      {showUndo && lastSavedTastingId && (
+        <div className="undo-toast">
+          <span>Saved {ratingLabel}</span>
+          <button onClick={async () => {
+            try {
+              await api.deleteTasting(lastSavedTastingId);
+              setShowUndo(false);
+              setLastSavedTastingId(null);
+              if (undoTimer) clearTimeout(undoTimer);
+              loadRecentWines();
+            } catch { /* silent */ }
+          }}>Undo</button>
+        </div>
+      )}
     </div>
   );
 }

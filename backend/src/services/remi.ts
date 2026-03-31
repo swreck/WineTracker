@@ -105,15 +105,17 @@ export async function enrichWineVintage(
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 500,
+    max_tokens: 700,
     system: REMI_PERSONA,
     messages: [{
       role: 'user',
-      content: `Write a rich profile of this specific wine and vintage in two paragraphs.
+      content: `Write a rich profile of this specific wine and vintage. Respond with JSON only, no markdown:
 
-PARAGRAPH 1 — Your independent wine knowledge: What is this specific wine and vintage like? How does this vintage compare to others from this producer? Notable vintage conditions or winemaking approach? Be specific to this wine and year — not generic descriptions of the grape or region. If you don't have specific knowledge, say what you can honestly.
-
-PARAGRAPH 2 — Connections to Ken's world (ONLY if there is something genuinely worth saying): Connect your wine knowledge to what Gerald said, what Ken rated and noted, or patterns in Ken's collection. For example: confirm or add context to Gerald's description, note if Ken's rating aligns with or diverges from critical consensus, or observe patterns like "this is your third wine from this region and you've liked them all" or "critics love this style but your ratings suggest otherwise." Skip this paragraph entirely if there's nothing meaningful to connect.
+{
+  "profile": "Two paragraphs. PARAGRAPH 1: Your independent wine knowledge — what is this specific wine and vintage like? How does this vintage compare? Notable vintage conditions? Be specific, not generic. PARAGRAPH 2 (ONLY if meaningful): Connect your wine knowledge to Ken's data — Gerald's notes, Ken's ratings, collection patterns. Skip entirely if nothing worth connecting.",
+  "drinkWindow": "Short phrase: 'Peak now', 'Hold 2-3 years', 'Drink 2026-2030', 'Past peak', or 'Drink young' — based on the wine type, vintage age, and typical aging curve. Be honest if uncertain.",
+  "foodPairing": "2-4 specific dishes or ingredients this wine pairs well with, comma-separated. Think about what a knowledgeable friend would suggest, not a textbook."
+}
 
 ${details}
 
@@ -122,10 +124,23 @@ ${personalContext ? `Ken's personal data:\n${personalContext}` : 'No personal da
   });
 
   const content = message.content[0];
-  const profile = content.type === 'text' ? content.text : 'No profile available.';
+  const responseText = content.type === 'text' ? content.text : '';
+
+  let profile = responseText;
+  let drinkWindow: string | null = null;
+  let foodPairing: string | null = null;
+
+  try {
+    const parsed = JSON.parse(extractJSON(responseText));
+    profile = parsed.profile || responseText;
+    drinkWindow = parsed.drinkWindow || null;
+    foodPairing = parsed.foodPairing || null;
+  } catch {
+    // If JSON parse fails, use raw text as profile (backwards compatible)
+  }
 
   await prisma.remiEnrichment.create({
-    data: { wineId, vintageYear, profile },
+    data: { wineId, vintageYear, profile, drinkWindow, foodPairing },
   });
 
   return profile;
