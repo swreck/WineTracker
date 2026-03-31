@@ -31,8 +31,8 @@ export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex >= 0 && currentIndex < filteredWineIds.length - 1;
 
-  // Expanded vintage tracking - auto-expand if single vintage
-  const [expandedVintages, setExpandedVintages] = useState<Set<number>>(new Set());
+  // Expanded vintage tracking (preserved for potential future use)
+  const [, setExpandedVintages] = useState<Set<number>>(new Set());
 
   // Add vintage state
   const [addingVintage, setAddingVintage] = useState(false);
@@ -74,10 +74,17 @@ export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
   });
   const [showEditRatingPicker, setShowEditRatingPicker] = useState(false);
 
-  // Tell Me More state
+  // Detail tab state
+  type DetailTab = 'notes' | 'gerald' | 'remi' | 'details';
+  const [activeTab, setActiveTab] = useState<DetailTab>('notes');
+
+  // Tell Me More / Remi state
   const [aiLoading, setAiLoading] = useState(false);
   const [aiText, setAiText] = useState<string | null>(null);
   const [showVintagePicker, setShowVintagePicker] = useState(false);
+
+  // Remi enrichment profiles (loaded per vintage)
+  const [enrichments, setEnrichments] = useState<Record<string, string>>({});
 
   async function handleTellMeMore(vintageYear?: number) {
     if (!wine) return;
@@ -131,10 +138,25 @@ export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
     loadWine();
   }, [wineId]);
 
-  // Auto-expand single vintage
+  // Auto-expand single vintage and set default tab
   useEffect(() => {
     if (wine?.vintages?.length === 1) {
       setExpandedVintages(new Set([wine.vintages[0].id]));
+    }
+    // Default tab: notes if there are tastings, otherwise remi
+    if (wine?.vintages) {
+      const hasTastings = wine.vintages.some(v => v.tastingEvents && v.tastingEvents.length > 0);
+      setActiveTab(hasTastings ? 'notes' : 'remi');
+
+      // Load enrichments for all vintages
+      for (const v of wine.vintages) {
+        const key = `${wine.id}-${v.vintageYear}`;
+        if (!enrichments[key]) {
+          api.remiGetEnrichment(wine.id, v.vintageYear)
+            .then(data => setEnrichments(prev => ({ ...prev, [key]: data.profile })))
+            .catch(() => {}); // Silent — enrichment is optional
+        }
+      }
     }
   }, [wine]);
 
@@ -174,17 +196,8 @@ export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
     }
   }
 
-  function toggleVintage(vintageId: number) {
-    setExpandedVintages(prev => {
-      const next = new Set(prev);
-      if (next.has(vintageId)) {
-        next.delete(vintageId);
-      } else {
-        next.add(vintageId);
-      }
-      return next;
-    });
-  }
+  // toggleVintage no longer used with tabbed layout
+  void setExpandedVintages;
 
   // Add vintage
   async function handleAddVintage() {
@@ -428,126 +441,258 @@ export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
     day: 'numeric'
   });
 
+  // Gather all tastings and seller notes across vintages for tabbed view
+  const allTastings = wine?.vintages?.flatMap(v =>
+    (v.tastingEvents || []).map(t => ({
+      ...t,
+      vintageYear: v.vintageYear,
+      vintageId: v.id,
+    }))
+  )?.sort((a, b) => new Date(b.tastingDate || 0).getTime() - new Date(a.tastingDate || 0).getTime()) || [];
+
+  const allSellerNotes = wine?.vintages?.filter(v => v.sellerNotes).map(v => ({
+    vintageYear: v.vintageYear,
+    notes: v.sellerNotes!,
+    source: v.source,
+    sourceCustom: v.sourceCustom,
+  })) || [];
+
+  const allEnrichmentTexts = wine?.vintages?.map(v => ({
+    vintageYear: v.vintageYear,
+    profile: enrichments[`${wine.id}-${v.vintageYear}`] || null,
+  })).filter(e => e.profile) || [];
+
   if (loading) return <div className="loading">Loading wine...</div>;
   if (error && !wine) return <div className="error">{error}</div>;
   if (!wine) return <div className="error">Wine not found</div>;
 
   return (
-    <div className="wine-detail">
+    <div className="wine-detail v2-detail">
       <div className="wine-detail-nav">
-        <button className="back-button" onClick={onBack}>
-          ← Back to Wines
-        </button>
+        <button className="back-button" onClick={onBack}>←</button>
         {onNavigateWine && (
           <div className="wine-nav-arrows">
-            <button
-              className="nav-arrow"
-              disabled={!hasPrev}
-              onClick={() => hasPrev && onNavigateWine(filteredWineIds[currentIndex - 1])}
-              title="Previous wine"
-            >
-              ◀
-            </button>
+            <button className="nav-arrow" disabled={!hasPrev}
+              onClick={() => hasPrev && onNavigateWine(filteredWineIds[currentIndex - 1])}>◀</button>
             {filteredWineIds.length > 0 && (
-              <span className="nav-position">{currentIndex + 1} of {filteredWineIds.length}</span>
+              <span className="nav-position">{currentIndex + 1}/{filteredWineIds.length}</span>
             )}
-            <button
-              className="nav-arrow"
-              disabled={!hasNext}
-              onClick={() => hasNext && onNavigateWine(filteredWineIds[currentIndex + 1])}
-              title="Next wine"
-            >
-              ▶
-            </button>
+            <button className="nav-arrow" disabled={!hasNext}
+              onClick={() => hasNext && onNavigateWine(filteredWineIds[currentIndex + 1])}>▶</button>
           </div>
         )}
       </div>
 
       {error && <div className="error-banner">{error}</div>}
 
-      <div className="wine-header">
-        {editing ? (
-          <div className="edit-form">
-            <input
-              type="text"
-              value={editData.name || ''}
-              onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-              placeholder="Wine Name"
-            />
-            <select
-              value={editData.color || 'red'}
-              onChange={(e) => setEditData({ ...editData, color: e.target.value as Wine['color'] })}
-            >
-              <option value="red">Red</option>
-              <option value="white">White</option>
-              <option value="rose">Rosé</option>
-              <option value="sparkling">Sparkling</option>
-            </select>
-            <input
-              type="text"
-              value={editData.region || ''}
-              onChange={(e) => setEditData({ ...editData, region: e.target.value })}
-              placeholder="Region"
-            />
-            <input
-              type="text"
-              value={editData.appellation || ''}
-              onChange={(e) => setEditData({ ...editData, appellation: e.target.value })}
-              placeholder="Appellation"
-            />
-            <input
-              type="text"
-              value={editData.grapeVarietyOrBlend || ''}
-              onChange={(e) => setEditData({ ...editData, grapeVarietyOrBlend: e.target.value })}
-              placeholder="Grape / Blend"
-            />
-            <div className="edit-actions">
-              <button onClick={handleSave}>Save</button>
-              <button onClick={() => setEditing(false)}>Cancel</button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <h2 className="wine-name-serif wine-detail-name">{wine.name}</h2>
-            <div className="wine-identity">
-              <span className={`color-dot ${wine.color}`} />
-              <span className="wine-identity-text">
-                {[colorLabels[wine.color], wine.region, wine.appellation, wine.grapeVarietyOrBlend].filter(Boolean).join(' · ')}
-              </span>
-            </div>
-            <div className="button-group">
-              <button className="edit-button" onClick={() => setEditing(true)}>
-                Edit
+      {/* ===== WINE HERO ===== */}
+      <div className={`wine-hero card-tint-${wine.color}`}>
+        <h2 className="wine-name-serif wine-hero-name">{wine.name}</h2>
+        <div className="wine-identity">
+          <span className={`color-dot ${wine.color}`} />
+          <span className="wine-identity-text">
+            {[colorLabels[wine.color], wine.region, wine.appellation, wine.grapeVarietyOrBlend].filter(Boolean).join(' · ')}
+          </span>
+        </div>
+        <div className="wine-hero-vintages">
+          {wine.vintages?.map(v => v.vintageYear).sort((a, b) => b - a).join(', ')}
+        </div>
+        {wine.averageRating && (
+          <span className="wine-hero-rating">{wine.averageRating.toFixed(1)}</span>
+        )}
+      </div>
+
+      {/* ===== TAB BAR ===== */}
+      <div className="detail-tabs">
+        <button className={`detail-tab ${activeTab === 'notes' ? 'active' : ''}`} onClick={() => setActiveTab('notes')}>
+          My Notes
+        </button>
+        <button className={`detail-tab ${activeTab === 'gerald' ? 'active' : ''}`} onClick={() => setActiveTab('gerald')}>
+          Gerald
+        </button>
+        <button className={`detail-tab ${activeTab === 'remi' ? 'active' : ''}`} onClick={() => setActiveTab('remi')}>
+          Remi
+        </button>
+        <button className={`detail-tab ${activeTab === 'details' ? 'active' : ''}`} onClick={() => setActiveTab('details')}>
+          Details
+        </button>
+      </div>
+
+      {/* ===== TAB CONTENT ===== */}
+      <div className="detail-tab-content">
+
+        {/* MY NOTES TAB */}
+        {activeTab === 'notes' && (
+          <div className="tab-notes">
+            {allTastings.length > 0 ? (
+              <div className="tasting-journal">
+                {allTastings.map((tasting) => (
+                  <div key={tasting.id} className="tasting-journal-entry">
+                    {editingTastingId === tasting.id ? (
+                      <div className="edit-tasting-form">
+                        <div className="date-row">
+                          <input type="date" value={editTasting.tastingDate}
+                            onChange={(e) => setEditTasting({ ...editTasting, tastingDate: e.target.value })} />
+                          {editTasting.tastingDate && (
+                            <button type="button" className="clear-date-btn"
+                              onClick={() => setEditTasting({ ...editTasting, tastingDate: '' })}>✕</button>
+                          )}
+                        </div>
+                        <button className={`inline-rating-btn ${editTasting.rating ? 'has-rating' : ''}`}
+                          onClick={() => setShowEditRatingPicker(true)}>
+                          {editTasting.rating ? ratingOptions.find(r => String(r.value) === editTasting.rating)?.label || editTasting.rating : 'Tap to rate'}
+                        </button>
+                        <AutoExpandTextarea value={editTasting.notes}
+                          onChange={(e) => setEditTasting({ ...editTasting, notes: e.target.value })}
+                          placeholder="Notes..." />
+                        <div className="form-actions">
+                          <button onClick={() => handleSaveTasting(tasting.id)}>Save</button>
+                          <button onClick={() => setEditingTastingId(null)}>Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="tasting-journal-header">
+                          <div className="tasting-journal-left">
+                            <span className="tasting-journal-date">
+                              {tasting.tastingDate ? formatDate(tasting.tastingDate) : '(no date)'}
+                            </span>
+                            <span className="tasting-journal-vintage">{tasting.vintageYear}</span>
+                          </div>
+                          <span className="tasting-journal-rating">{Number(tasting.rating).toFixed(1)}</span>
+                          <div className="tasting-journal-actions">
+                            <button className="edit-inline-btn" onClick={() => startEditTasting(tasting)} title="Edit">✎</button>
+                            <button className="delete-inline-btn" onClick={() => handleDeleteTasting(tasting.id)} title="Delete">×</button>
+                          </div>
+                        </div>
+                        {tasting.notes && <p className="tasting-journal-notes">{tasting.notes}</p>}
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="tab-empty">
+                <p>No tasting notes yet.</p>
+              </div>
+            )}
+
+            {/* Add tasting button */}
+            {wine.vintages && wine.vintages.length > 0 && !addingTastingForVintage && (
+              <button className="tab-action-btn" onClick={() => {
+                const v = wine.vintages!.length === 1 ? wine.vintages![0] : null;
+                if (v) startAddTasting(v.id);
+                else setActiveTab('details'); // go to details to pick vintage
+              }}>
+                + Add Tasting
               </button>
-              <button className="delete-button" onClick={handleDelete}>
-                Delete
-              </button>
-              <button className="remi-profile-button" onClick={onTellMeMoreClick} disabled={aiLoading}>
-                {aiLoading ? 'Remi is thinking...' : 'Ask Remi'}
-              </button>
-            </div>
-            {showVintagePicker && wine.vintages && (
-              <div className="vintage-picker">
-                <span className="vintage-picker-label">Which vintage?</span>
-                <div className="vintage-picker-options">
-                  {wine.vintages.map(v => (
-                    <button
-                      key={v.id}
-                      className="vintage-picker-btn"
-                      onClick={() => handleTellMeMore(v.vintageYear)}
-                    >
-                      {v.vintageYear}
-                    </button>
-                  ))}
+            )}
+
+            {/* Inline add tasting form */}
+            {addingTastingForVintage && (
+              <div className="add-tasting-form">
+                <div className="date-row">
+                  <input type="date" value={newTasting.tastingDate}
+                    onChange={(e) => setNewTasting({ ...newTasting, tastingDate: e.target.value })} />
+                  <button className="today-btn"
+                    onClick={() => setNewTasting({ ...newTasting, tastingDate: new Date().toISOString().split('T')[0] })}>Today</button>
+                </div>
+                <button className={`inline-rating-btn ${newTasting.rating !== null ? 'has-rating' : ''}`}
+                  onClick={() => setShowRatingPicker(true)}>
+                  {newTasting.rating !== null ? newTasting.ratingLabel : 'Tap to rate'}
+                </button>
+                <AutoExpandTextarea placeholder="Notes (optional)" value={newTasting.notes}
+                  onChange={(e) => setNewTasting({ ...newTasting, notes: e.target.value })} />
+                <div className="form-actions">
+                  <button onClick={handleAddTasting}>Save</button>
+                  <button onClick={() => setAddingTastingForVintage(null)}>Cancel</button>
                 </div>
               </div>
             )}
-            {aiLoading && (
-              <div className="remi-profile-area">
-                <div className="remi-profile-label">Remi</div>
-                <div className="ai-loading-spinner" />
+
+            {/* Rating pickers */}
+            {showRatingPicker && (
+              <div className="rating-popup-overlay" onClick={() => setShowRatingPicker(false)}>
+                <div className="rating-popup" onClick={(e) => e.stopPropagation()}>
+                  <div className="rating-popup-header">Rate this wine</div>
+                  <div className="rating-options-grid">
+                    {ratingOptions.map((opt) => (
+                      <button key={opt.value}
+                        className={`rating-option ${newTasting.rating === opt.value ? 'selected' : ''} ${opt.value >= 8 ? 'high' : opt.value >= 5 ? 'mid' : 'low'}`}
+                        onClick={() => selectRating(opt.value, opt.label)}>{opt.label}</button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
+            {showEditRatingPicker && (
+              <div className="rating-popup-overlay" onClick={() => setShowEditRatingPicker(false)}>
+                <div className="rating-popup" onClick={(e) => e.stopPropagation()}>
+                  <div className="rating-popup-header">Select Rating</div>
+                  <div className="rating-options-grid">
+                    {ratingOptions.map(({ value, label }) => (
+                      <button key={value}
+                        className={`rating-option ${value < 6 ? 'low' : value >= 8 ? 'high' : 'mid'} ${editTasting.rating === String(value) ? 'selected' : ''}`}
+                        onClick={() => handleEditRatingSelect(value)}>{label}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* GERALD TAB */}
+        {activeTab === 'gerald' && (
+          <div className="tab-gerald">
+            {allSellerNotes.length > 0 ? (
+              allSellerNotes.map((sn, i) => (
+                <div key={i} className="gerald-note-card">
+                  <div className="gerald-note-header">
+                    <span className="gerald-note-vintage">{sn.vintageYear}</span>
+                    {sn.source && <span className="gerald-note-source">{getSourceLabel(sn.source, sn.sourceCustom || undefined)}</span>}
+                  </div>
+                  <p className="gerald-note-text">{sn.notes}</p>
+                </div>
+              ))
+            ) : (
+              <div className="tab-empty">
+                <p>No seller notes for this wine.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* REMI TAB */}
+        {activeTab === 'remi' && (
+          <div className="tab-remi">
+            {allEnrichmentTexts.length > 0 ? (
+              allEnrichmentTexts.map((e, i) => (
+                <div key={i} className="remi-enrichment-card">
+                  <div className="remi-enrichment-header">
+                    <span className="remi-profile-label">Remi</span>
+                    <span className="remi-enrichment-vintage">{e.vintageYear}</span>
+                  </div>
+                  {e.profile!.split('\n\n').map((p, j) => (
+                    <p key={j} className="remi-paragraph">{p}</p>
+                  ))}
+                </div>
+              ))
+            ) : aiLoading ? (
+              <div className="tab-empty">
+                <div className="ai-loading-spinner" />
+                <p>Remi is thinking...</p>
+              </div>
+            ) : (
+              <div className="tab-empty">
+                <p>Remi hasn't profiled this wine yet.</p>
+                <button className="tab-action-btn" onClick={onTellMeMoreClick} disabled={aiLoading}>
+                  Ask Remi
+                </button>
+              </div>
+            )}
+
+            {/* AI response from Ask Remi button */}
             {aiText && !aiLoading && (
               <div className="remi-profile-area">
                 <div className="remi-profile-header">
@@ -559,389 +704,198 @@ export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
                 ))}
               </div>
             )}
-          </>
+
+            {showVintagePicker && wine.vintages && (
+              <div className="vintage-picker">
+                <span className="vintage-picker-label">Which vintage?</span>
+                <div className="vintage-picker-options">
+                  {wine.vintages.map(v => (
+                    <button key={v.id} className="vintage-picker-btn"
+                      onClick={() => handleTellMeMore(v.vintageYear)}>{v.vintageYear}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* DETAILS TAB */}
+        {activeTab === 'details' && (
+          <div className="tab-details">
+            {/* Edit wine */}
+            {editing ? (
+              <div className="edit-form">
+                <input type="text" value={editData.name || ''}
+                  onChange={(e) => setEditData({ ...editData, name: e.target.value })} placeholder="Wine Name" />
+                <select value={editData.color || 'red'}
+                  onChange={(e) => setEditData({ ...editData, color: e.target.value as Wine['color'] })}>
+                  <option value="red">Red</option><option value="white">White</option>
+                  <option value="rose">Rosé</option><option value="sparkling">Sparkling</option>
+                </select>
+                <input type="text" value={editData.region || ''}
+                  onChange={(e) => setEditData({ ...editData, region: e.target.value })} placeholder="Region" />
+                <input type="text" value={editData.appellation || ''}
+                  onChange={(e) => setEditData({ ...editData, appellation: e.target.value })} placeholder="Appellation" />
+                <input type="text" value={editData.grapeVarietyOrBlend || ''}
+                  onChange={(e) => setEditData({ ...editData, grapeVarietyOrBlend: e.target.value })} placeholder="Grape / Blend" />
+                <div className="edit-actions">
+                  <button onClick={handleSave}>Save</button>
+                  <button onClick={() => setEditing(false)}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div className="detail-actions-row">
+                <button className="detail-action-btn" onClick={() => setEditing(true)}>Edit Wine</button>
+                <button className="detail-action-btn danger" onClick={handleDelete}>Delete Wine</button>
+              </div>
+            )}
+
+            {/* Vintages */}
+            <div className="detail-section">
+              <div className="section-header">
+                <h4>Vintages</h4>
+                <button className="small-btn" onClick={() => setAddingVintage(true)}>+ Add</button>
+              </div>
+
+              {addingVintage && (
+                <div className="add-vintage-form">
+                  <input type="number" value={newVintageYear}
+                    onChange={(e) => setNewVintageYear(parseInt(e.target.value, 10) || 0)}
+                    placeholder="Year" min={1900} max={2100} />
+                  <div className="form-actions">
+                    <button onClick={handleAddVintage}>Add</button>
+                    <button onClick={() => setAddingVintage(false)}>Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              {wine.vintages && wine.vintages.map((vintage) => (
+                <div key={vintage.id} className="detail-vintage-card">
+                  <div className="detail-vintage-header">
+                    <span className="detail-vintage-year">{vintage.vintageYear}</span>
+                    {vintage.source && <span className="source-badge">{getSourceLabel(vintage.source, vintage.sourceCustom)}</span>}
+                  </div>
+
+                  {/* Source editing */}
+                  <div className="detail-field">
+                    <span className="detail-field-label">Source:</span>
+                    {editingSource === vintage.id ? (
+                      <div className="inline-edit">
+                        <select value={sourceValue} onChange={(e) => setSourceValue(e.target.value as WineSource | '')}>
+                          <option value="">Not specified</option>
+                          <option value="weimax">Weimax</option><option value="costco">Costco</option>
+                          <option value="other">Other...</option>
+                        </select>
+                        {sourceValue === 'other' && (
+                          <input type="text" placeholder="Source name..." value={sourceCustomValue}
+                            onChange={(e) => setSourceCustomValue(e.target.value)} />
+                        )}
+                        <button onClick={() => handleSaveSource(vintage.id)}>Save</button>
+                        <button onClick={() => setEditingSource(null)}>Cancel</button>
+                      </div>
+                    ) : (
+                      <span className="field-value">
+                        {vintage.source ? getSourceLabel(vintage.source, vintage.sourceCustom) : '(not set)'}
+                        <button className="edit-inline-btn" onClick={() => startEditSource(vintage)}>✎</button>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Seller notes editing */}
+                  <div className="detail-field">
+                    <span className="detail-field-label">Seller Notes:</span>
+                    {editingSellerNotes === vintage.id ? (
+                      <div className="inline-edit">
+                        <textarea value={sellerNotesValue} onChange={(e) => setSellerNotesValue(e.target.value)}
+                          rows={3} placeholder="Enter seller notes..." />
+                        <div className="edit-actions">
+                          <button onClick={() => handleSaveSellerNotes(vintage.id)}>Save</button>
+                          <button onClick={() => setEditingSellerNotes(null)}>Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="field-value">
+                        {vintage.sellerNotes || '(none)'}
+                        <button className="edit-inline-btn" onClick={() => startEditSellerNotes(vintage)}>✎</button>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Purchases */}
+                  <div className="detail-field">
+                    <span className="detail-field-label">Purchases:</span>
+                    <button className="small-btn" onClick={() => setShowAddPurchase(vintage.id)}>+ Add</button>
+                  </div>
+
+                  {showAddPurchase === vintage.id && (
+                    <div className="add-purchase-form">
+                      <input type="date" value={newPurchase.purchaseDate}
+                        onChange={(e) => setNewPurchase({ ...newPurchase, purchaseDate: e.target.value })} />
+                      <input type="number" step="0.01" min="0" placeholder="Price" value={newPurchase.pricePaid}
+                        onChange={(e) => setNewPurchase({ ...newPurchase, pricePaid: e.target.value })} />
+                      <input type="number" min="1" placeholder="Qty" value={newPurchase.quantity}
+                        onChange={(e) => setNewPurchase({ ...newPurchase, quantity: e.target.value })} style={{ width: '60px' }} />
+                      <button onClick={() => handleAddPurchase(vintage.id)}>Save</button>
+                      <button onClick={() => setShowAddPurchase(null)}>Cancel</button>
+                    </div>
+                  )}
+
+                  {vintage.purchaseItems && vintage.purchaseItems.length > 0 && (
+                    <ul className="purchase-list">
+                      {vintage.purchaseItems.map((item) => (
+                        <li key={item.id} className="purchase-item">
+                          {editingPurchaseDateId === item.purchaseBatch?.id ? (
+                            <span className="date-edit">
+                              <input type="date" value={editPurchaseDateValue}
+                                onChange={(e) => setEditPurchaseDateValue(e.target.value)} autoFocus />
+                              <button onClick={() => handleSavePurchaseDate(item.purchaseBatch!.id)}>✓</button>
+                              <button onClick={() => setEditingPurchaseDateId(null)}>✕</button>
+                            </span>
+                          ) : (
+                            <span className="clickable"
+                              onClick={() => item.purchaseBatch && startEditPurchaseDate(item.purchaseBatch.id, item.purchaseBatch.purchaseDate)}
+                            >{formatDate(item.purchaseBatch?.purchaseDate || '')}</span>
+                          )}
+                          {' - '}
+                          {editingPriceId === item.id ? (
+                            <span className="price-edit">
+                              $<input type="number" step="0.01" min="0" value={editPriceValue}
+                                onChange={(e) => setEditPriceValue(e.target.value)} autoFocus style={{ width: '70px' }} />
+                              <button onClick={() => handleUpdatePrice(item.id)}>✓</button>
+                              <button onClick={() => setEditingPriceId(null)}>✕</button>
+                            </span>
+                          ) : (
+                            <span className="clickable"
+                              onClick={() => startEditPrice(item.id, item.pricePaid ? Number(item.pricePaid) : undefined)}
+                            >{item.pricePaid ? `$${Number(item.pricePaid).toFixed(0)}` : '(no price)'}</span>
+                          )}
+                          {item.quantityPurchased > 1 && <span> × {item.quantityPurchased}</span>}
+                          <button className="delete-inline-btn" onClick={() => handleDeletePurchase(item.id)}>×</button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {/* Add tasting for this vintage */}
+                  <button className="small-btn" onClick={() => startAddTasting(vintage.id)}>+ Add Tasting</button>
+
+                  <div className="detail-vintage-footer">
+                    <label className="not-available-toggle">
+                      <input type="checkbox" checked={vintage.notAvailable || false}
+                        onChange={async (e) => {
+                          try { await api.updateVintage(vintage.id, { notAvailable: e.target.checked } as any); await loadWine(); }
+                          catch (err) { setError(err instanceof Error ? err.message : 'Failed to update'); }
+                        }} />
+                      Not available
+                    </label>
+                    <button className="delete-button small" onClick={() => handleDeleteVintage(vintage)}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </div>
-
-      <div className="vintages-header">
-        <h4>Vintages</h4>
-        <button className="add-vintage-btn" onClick={() => setAddingVintage(true)}>
-          + Add Vintage
-        </button>
-      </div>
-
-      {addingVintage && (
-        <div className="add-vintage-form">
-          <input
-            type="number"
-            value={newVintageYear}
-            onChange={(e) => setNewVintageYear(parseInt(e.target.value, 10) || 0)}
-            placeholder="Year"
-            min={1900}
-            max={2100}
-          />
-          <div className="form-actions">
-            <button onClick={handleAddVintage}>Add</button>
-            <button onClick={() => setAddingVintage(false)}>Cancel</button>
-          </div>
-        </div>
-      )}
-
-      {wine.vintages && wine.vintages.length > 0 ? (
-        <div className="vintages-list">
-          {wine.vintages.map((vintage) => {
-            const isExpanded = expandedVintages.has(vintage.id);
-            const avgRating =
-              vintage.tastingEvents && vintage.tastingEvents.length > 0
-                ? vintage.tastingEvents.reduce((sum, t) => sum + Number(t.rating), 0) /
-                  vintage.tastingEvents.length
-                : null;
-
-            return (
-              <div key={vintage.id} className={`vintage-card-expandable ${isExpanded ? 'expanded' : ''}`}>
-                <div
-                  className="vintage-header-row clickable"
-                  onClick={() => toggleVintage(vintage.id)}
-                >
-                  <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span>
-                  <div className="vintage-year">{vintage.vintageYear}</div>
-                  {avgRating && (
-                    <span className="rating">Avg: {avgRating.toFixed(1)}</span>
-                  )}
-                  {vintage.tastingEvents && vintage.tastingEvents.length > 0 && (
-                    <span className="tasting-count">{vintage.tastingEvents.length} tasting{vintage.tastingEvents.length > 1 ? 's' : ''}</span>
-                  )}
-                  {vintage.source && (
-                    <span className="source-badge">{getSourceLabel(vintage.source, vintage.sourceCustom)}</span>
-                  )}
-                </div>
-
-                {isExpanded && (
-                  <div className="vintage-expanded-content">
-                    {/* Source field */}
-                    <div className="vintage-field">
-                      <strong>Source:</strong>
-                      {editingSource === vintage.id ? (
-                        <div className="inline-edit">
-                          <select
-                            value={sourceValue}
-                            onChange={(e) => setSourceValue(e.target.value as WineSource | '')}
-                            autoFocus
-                          >
-                            <option value="">Not specified</option>
-                            <option value="weimax">Weimax</option>
-                            <option value="costco">Costco</option>
-                            <option value="other">Other...</option>
-                          </select>
-                          {sourceValue === 'other' && (
-                            <input
-                              type="text"
-                              placeholder="Source name..."
-                              value={sourceCustomValue}
-                              onChange={(e) => setSourceCustomValue(e.target.value)}
-                            />
-                          )}
-                          <button onClick={() => handleSaveSource(vintage.id)}>Save</button>
-                          <button onClick={() => setEditingSource(null)}>Cancel</button>
-                        </div>
-                      ) : (
-                        <span className="field-value">
-                          {vintage.source ? getSourceLabel(vintage.source, vintage.sourceCustom) : '(not set)'}
-                          <button className="edit-inline-btn" onClick={() => startEditSource(vintage)} title="Edit">✎</button>
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Gerald's notes */}
-                    <div className="vintage-field gerald-notes-section">
-                      <strong>Gerald's Notes:</strong>
-                      {editingSellerNotes === vintage.id ? (
-                        <div className="inline-edit">
-                          <textarea
-                            value={sellerNotesValue}
-                            onChange={(e) => setSellerNotesValue(e.target.value)}
-                            rows={3}
-                            placeholder="Enter seller notes..."
-                            autoFocus
-                          />
-                          <div className="edit-actions">
-                            <button onClick={() => handleSaveSellerNotes(vintage.id)}>Save</button>
-                            <button onClick={() => setEditingSellerNotes(null)}>Cancel</button>
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="field-value">
-                          {vintage.sellerNotes || '(none)'}
-                          <button className="edit-inline-btn" onClick={() => startEditSellerNotes(vintage)} title="Edit">✎</button>
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Purchases */}
-                    <div className="vintage-section">
-                      <div className="section-header">
-                        <strong>Purchases</strong>
-                        <button className="small-btn" onClick={() => setShowAddPurchase(vintage.id)}>+ Add</button>
-                      </div>
-
-                      {showAddPurchase === vintage.id && (
-                        <div className="add-purchase-form">
-                          <input
-                            type="date"
-                            value={newPurchase.purchaseDate}
-                            onChange={(e) => setNewPurchase({ ...newPurchase, purchaseDate: e.target.value })}
-                          />
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder="Price"
-                            value={newPurchase.pricePaid}
-                            onChange={(e) => setNewPurchase({ ...newPurchase, pricePaid: e.target.value })}
-                          />
-                          <input
-                            type="number"
-                            min="1"
-                            placeholder="Qty"
-                            value={newPurchase.quantity}
-                            onChange={(e) => setNewPurchase({ ...newPurchase, quantity: e.target.value })}
-                            style={{ width: '60px' }}
-                          />
-                          <button onClick={() => handleAddPurchase(vintage.id)}>Save</button>
-                          <button onClick={() => setShowAddPurchase(null)}>Cancel</button>
-                        </div>
-                      )}
-
-                      {vintage.purchaseItems && vintage.purchaseItems.length > 0 ? (
-                        <ul className="purchase-list">
-                          {vintage.purchaseItems.map((item) => (
-                            <li key={item.id} className="purchase-item">
-                              {editingPurchaseDateId === item.purchaseBatch?.id ? (
-                                <span className="date-edit">
-                                  <input
-                                    type="date"
-                                    value={editPurchaseDateValue}
-                                    onChange={(e) => setEditPurchaseDateValue(e.target.value)}
-                                    autoFocus
-                                  />
-                                  <button onClick={() => handleSavePurchaseDate(item.purchaseBatch!.id)}>✓</button>
-                                  <button onClick={() => setEditingPurchaseDateId(null)}>✕</button>
-                                </span>
-                              ) : (
-                                <span
-                                  className="clickable"
-                                  onClick={() => item.purchaseBatch && startEditPurchaseDate(item.purchaseBatch.id, item.purchaseBatch.purchaseDate)}
-                                  title="Click to edit date"
-                                >
-                                  {formatDate(item.purchaseBatch?.purchaseDate || '')}
-                                </span>
-                              )}
-                              {' - '}
-                              {editingPriceId === item.id ? (
-                                <span className="price-edit">
-                                  $<input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={editPriceValue}
-                                    onChange={(e) => setEditPriceValue(e.target.value)}
-                                    autoFocus
-                                    style={{ width: '70px' }}
-                                  />
-                                  <button onClick={() => handleUpdatePrice(item.id)}>✓</button>
-                                  <button onClick={() => setEditingPriceId(null)}>✕</button>
-                                </span>
-                              ) : (
-                                <span
-                                  className="clickable"
-                                  onClick={() => startEditPrice(item.id, item.pricePaid ? Number(item.pricePaid) : undefined)}
-                                >
-                                  {item.pricePaid ? `$${Number(item.pricePaid).toFixed(0)}` : '(no price)'}
-                                </span>
-                              )}
-                              {item.quantityPurchased > 1 && <span> × {item.quantityPurchased}</span>}
-                              <button
-                                className="delete-inline-btn"
-                                onClick={() => handleDeletePurchase(item.id)}
-                                title="Delete purchase"
-                              >
-                                ×
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="empty-small">No purchases recorded</p>
-                      )}
-                    </div>
-
-                    {/* Tastings */}
-                    <div className="vintage-section">
-                      <div className="section-header">
-                        <strong>Tastings</strong>
-                        <button className="small-btn" onClick={() => startAddTasting(vintage.id)}>+ Add</button>
-                      </div>
-
-                      {addingTastingForVintage === vintage.id && (
-                        <div className="add-tasting-form">
-                          <div className="date-row">
-                            <input
-                              type="date"
-                              value={newTasting.tastingDate}
-                              onChange={(e) => setNewTasting({ ...newTasting, tastingDate: e.target.value })}
-                            />
-                            <button
-                              className="today-btn"
-                              onClick={() => setNewTasting({ ...newTasting, tastingDate: new Date().toISOString().split('T')[0] })}
-                            >
-                              Today
-                            </button>
-                          </div>
-                          <button
-                            className={`inline-rating-btn ${newTasting.rating !== null ? 'has-rating' : ''}`}
-                            onClick={() => setShowRatingPicker(true)}
-                          >
-                            {newTasting.rating !== null ? newTasting.ratingLabel : 'Tap to rate'}
-                          </button>
-                          <AutoExpandTextarea
-                            placeholder="Notes (optional)"
-                            value={newTasting.notes}
-                            onChange={(e) => setNewTasting({ ...newTasting, notes: e.target.value })}
-                          />
-                          <div className="form-actions">
-                            <button onClick={handleAddTasting}>Save</button>
-                            <button onClick={() => setAddingTastingForVintage(null)}>Cancel</button>
-                          </div>
-                        </div>
-                      )}
-
-                      {showRatingPicker && addingTastingForVintage === vintage.id && (
-                        <div className="rating-popup-overlay" onClick={() => setShowRatingPicker(false)}>
-                          <div className="rating-popup" onClick={(e) => e.stopPropagation()}>
-                            <div className="rating-popup-header">Rate this wine</div>
-                            <div className="rating-options-grid">
-                              {ratingOptions.map((opt) => (
-                                <button
-                                  key={opt.value}
-                                  className={`rating-option ${newTasting.rating === opt.value ? 'selected' : ''} ${opt.value >= 8 ? 'high' : opt.value >= 5 ? 'mid' : 'low'}`}
-                                  onClick={() => selectRating(opt.value, opt.label)}
-                                >
-                                  {opt.label}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {vintage.tastingEvents && vintage.tastingEvents.length > 0 ? (
-                        <div className="tastings-list">
-                          {vintage.tastingEvents.map((tasting) => (
-                            <div key={tasting.id} className="tasting-card">
-                              {editingTastingId === tasting.id ? (
-                                <div className="edit-tasting-form">
-                                  <div className="date-row">
-                                    <input
-                                      type="date"
-                                      value={editTasting.tastingDate}
-                                      onChange={(e) => setEditTasting({ ...editTasting, tastingDate: e.target.value })}
-                                    />
-                                    {editTasting.tastingDate && (
-                                      <button
-                                        type="button"
-                                        className="clear-date-btn"
-                                        onClick={() => setEditTasting({ ...editTasting, tastingDate: '' })}
-                                        title="Clear date"
-                                      >
-                                        ✕
-                                      </button>
-                                    )}
-                                  </div>
-                                  <button
-                                    className={`inline-rating-btn ${editTasting.rating ? 'has-rating' : ''}`}
-                                    onClick={() => setShowEditRatingPicker(true)}
-                                  >
-                                    {editTasting.rating ? ratingOptions.find(r => String(r.value) === editTasting.rating)?.label || editTasting.rating : 'Tap to rate'}
-                                  </button>
-                                  <AutoExpandTextarea
-                                    value={editTasting.notes}
-                                    onChange={(e) => setEditTasting({ ...editTasting, notes: e.target.value })}
-                                    placeholder="Notes..."
-                                  />
-                                  <div className="form-actions">
-                                    <button onClick={() => handleSaveTasting(tasting.id)}>Save</button>
-                                    <button onClick={() => setEditingTastingId(null)}>Cancel</button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <>
-                                  <div className="tasting-journal-header">
-                                    <span className="tasting-journal-date">{tasting.tastingDate ? formatDate(tasting.tastingDate) : '(no date)'}</span>
-                                    <span className="tasting-journal-rating">{Number(tasting.rating).toFixed(1)}</span>
-                                    <div className="tasting-journal-actions">
-                                      <button className="edit-inline-btn" onClick={() => startEditTasting(tasting)} title="Edit">✎</button>
-                                      <button className="delete-inline-btn" onClick={() => handleDeleteTasting(tasting.id)} title="Delete">×</button>
-                                    </div>
-                                  </div>
-                                  {tasting.notes && <p className="tasting-journal-notes">{tasting.notes}</p>}
-                                </>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="empty-small">No tastings yet</p>
-                      )}
-
-                      {showEditRatingPicker && (
-                        <div className="rating-popup-overlay" onClick={() => setShowEditRatingPicker(false)}>
-                          <div className="rating-popup" onClick={(e) => e.stopPropagation()}>
-                            <div className="rating-popup-header">Select Rating</div>
-                            <div className="rating-options-grid">
-                              {ratingOptions.map(({ value, label }) => (
-                                <button
-                                  key={value}
-                                  className={`rating-option ${value < 6 ? 'low' : value >= 8 ? 'high' : 'mid'} ${editTasting.rating === String(value) ? 'selected' : ''}`}
-                                  onClick={() => handleEditRatingSelect(value)}
-                                >
-                                  {label}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="vintage-actions">
-                      <label className="not-available-toggle">
-                        <input
-                          type="checkbox"
-                          checked={vintage.notAvailable || false}
-                          onChange={async (e) => {
-                            try {
-                              await api.updateVintage(vintage.id, { notAvailable: e.target.checked } as any);
-                              await loadWine();
-                            } catch (err) {
-                              setError(err instanceof Error ? err.message : 'Failed to update');
-                            }
-                          }}
-                        />
-                        Not available
-                      </label>
-                      <button className="delete-button small" onClick={() => handleDeleteVintage(vintage)}>
-                        Delete Vintage
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="empty">No vintages recorded</div>
-      )}
     </div>
   );
 }

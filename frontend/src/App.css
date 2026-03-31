@@ -4268,6 +4268,260 @@ textarea:focus-visible {
   margin: var(--space-2) 0;
 }
 
+/* ===== V2 TABBED DETAIL PAGE ===== */
+.v2-detail {
+  padding-bottom: calc(var(--space-12) + var(--safe-bottom));
+}
+
+.wine-hero {
+  padding: var(--space-5) var(--space-4);
+  border-radius: var(--radius-lg);
+  margin: var(--space-3) var(--space-4) 0;
+  position: relative;
+}
+
+.wine-hero-name {
+  font-size: var(--font-size-2xl);
+  line-height: 1.15;
+  margin-bottom: var(--space-2);
+}
+
+.wine-hero-vintages {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-1);
+}
+
+.wine-hero-rating {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-rating);
+}
+
+/* Tab bar */
+.detail-tabs {
+  display: flex;
+  gap: 0;
+  margin: var(--space-4) var(--space-4) 0;
+  border-bottom: 1px solid var(--color-separator-opaque);
+}
+
+.detail-tab {
+  flex: 1;
+  padding: var(--space-3) var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  border-bottom: 2px solid transparent;
+  text-align: center;
+  min-height: 44px;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.detail-tab.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+/* Tab content */
+.detail-tab-content {
+  padding: var(--space-4);
+  animation: fadeIn 0.15s ease;
+}
+
+.tab-empty {
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+  color: var(--color-text-tertiary);
+}
+
+.tab-empty p {
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-3);
+}
+
+.tab-action-btn {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px dashed var(--color-separator-opaque);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  margin-top: var(--space-3);
+  min-height: 44px;
+}
+
+/* Tasting journal entries */
+.tasting-journal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tasting-journal-entry {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-separator);
+}
+
+.tasting-journal-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tasting-journal-vintage {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+/* Gerald tab */
+.tab-gerald {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.gerald-note-card {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  border-left: 3px solid var(--color-text-tertiary);
+}
+
+.gerald-note-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.gerald-note-vintage {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+}
+
+.gerald-note-source {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.gerald-note-text {
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+  color: var(--color-text);
+  margin: 0;
+}
+
+/* Remi tab */
+.tab-remi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.remi-enrichment-card {
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-separator);
+}
+
+.remi-enrichment-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.remi-enrichment-vintage {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* Details tab */
+.tab-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.detail-actions-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.detail-action-btn {
+  flex: 1;
+  padding: var(--space-3);
+  border: 1px solid var(--color-separator-opaque);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  min-height: 44px;
+}
+
+.detail-action-btn.danger {
+  color: var(--color-danger);
+  border-color: var(--color-danger-subtle);
+}
+
+.detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.detail-vintage-card {
+  padding: var(--space-3);
+  border: 1px solid var(--color-separator);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.detail-vintage-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.detail-vintage-year {
+  font-family: var(--font-family-wine);
+  font-weight: 600;
+  font-size: var(--font-size-md);
+}
+
+.detail-field {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.detail-field-label {
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  min-width: 80px;
+}
+
+.detail-vintage-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-separator);
+}
+
 /* ===== REMI SUGGESTIONS ===== */
 .remi-suggests-header {
   display: flex;
