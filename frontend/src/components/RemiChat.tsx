@@ -11,9 +11,10 @@ interface ChatMessage {
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  initialMessage?: string | null;
 }
 
-export default function RemiChat({ isOpen, onClose }: Props) {
+export default function RemiChat({ isOpen, onClose, initialMessage }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -21,13 +22,37 @@ export default function RemiChat({ isOpen, onClose }: Props) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const [initialSent, setInitialSent] = useState<string | null>(null);
+
   useEffect(() => {
     if (isOpen) {
       loadHistory();
-      // Focus input after opening
       setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [isOpen]);
+
+  // Auto-send initial message when opening with wine context
+  useEffect(() => {
+    if (isOpen && initialMessage && initialMessage !== initialSent && !sending) {
+      setInitialSent(initialMessage);
+      setInput('');
+      // Auto-send after history loads
+      setTimeout(async () => {
+        setSending(true);
+        const tempId = Date.now();
+        setMessages(prev => [...prev, { id: tempId, role: 'user', content: initialMessage, createdAt: new Date().toISOString() }]);
+        try {
+          await api.remiChat(initialMessage);
+          const data = await api.remiGetChat();
+          setMessages(data.messages || []);
+        } catch {
+          setMessages(prev => [...prev, { id: tempId + 1, role: 'assistant', content: 'Sorry, had trouble with that. Try again?', createdAt: new Date().toISOString() }]);
+        } finally {
+          setSending(false);
+        }
+      }, 500);
+    }
+  }, [isOpen, initialMessage]);
 
   useEffect(() => {
     scrollToBottom();

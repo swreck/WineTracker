@@ -8,6 +8,7 @@ interface Props {
   wineId: number;
   onBack: () => void;
   onNavigateWine?: (id: number) => void;
+  onChatAboutWine?: (wineName: string, vintageYear?: number) => void;
 }
 
 const colorLabels: Record<string, string> = {
@@ -17,7 +18,7 @@ const colorLabels: Record<string, string> = {
   sparkling: 'Sparkling',
 };
 
-export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
+export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAboutWine }: Props) {
   const [wine, setWine] = useState<Wine | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -715,6 +716,16 @@ export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* Bridge to Remi chat */}
+            {onChatAboutWine && (allEnrichmentTexts.length > 0 || aiText) && (
+              <button
+                className="remi-continue-btn"
+                onClick={() => onChatAboutWine(wine.name, wine.vintages?.length === 1 ? wine.vintages[0].vintageYear : undefined)}
+              >
+                Continue with Remi
+              </button>
             )}
           </div>
         )}

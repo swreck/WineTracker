@@ -20,6 +20,15 @@ type Page =
 function App() {
   const [page, setPage] = useState<Page>({ type: 'home' });
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatContext, setChatContext] = useState<string | null>(null);
+
+  function openChatAboutWine(wineName: string, vintageYear?: number) {
+    const context = vintageYear
+      ? `Let's talk about my ${wineName} ${vintageYear}.`
+      : `Let's talk about my ${wineName}.`;
+    setChatContext(context);
+    setChatOpen(true);
+  }
 
   const navigate = (newPage: Page) => setPage(newPage);
 
@@ -87,6 +96,7 @@ function App() {
             wineId={page.id}
             onBack={() => navigate({ type: 'wines' })}
             onNavigateWine={(id) => navigate({ type: 'wine', id })}
+            onChatAboutWine={openChatAboutWine}
           />
         )}
         {page.type === 'import' && (
@@ -114,7 +124,7 @@ function App() {
       </main>
 
       {/* Remi chat */}
-      <RemiChat isOpen={chatOpen} onClose={() => setChatOpen(false)} />
+      <RemiChat isOpen={chatOpen} onClose={() => { setChatOpen(false); setChatContext(null); }} initialMessage={chatContext} />
 
       {/* Remi chat FAB — always visible */}
       {!chatOpen && (
