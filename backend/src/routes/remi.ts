@@ -132,13 +132,13 @@ router.post('/chat', async (req: Request, res: Response) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'AI service not configured' });
 
-  const { message } = req.body;
+  const { message, focusWineId } = req.body;
   if (!message || typeof message !== 'string') {
     return res.status(400).json({ error: 'message is required' });
   }
 
   try {
-    const reply = await chatWithRemi(prisma, apiKey, message);
+    const reply = await chatWithRemi(prisma, apiKey, message, focusWineId || null);
     res.json({ reply });
   } catch (error) {
     console.error('Error in Remi chat:', error);

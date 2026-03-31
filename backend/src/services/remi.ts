@@ -255,6 +255,7 @@ export async function chatWithRemi(
   prisma: PrismaClient,
   apiKey: string,
   userMessage: string,
+  focusWineId?: number | null,
 ): Promise<string> {
   // Save user message
   await prisma.remiChatMessage.create({
@@ -327,12 +328,41 @@ export async function chatWithRemi(
     messages.push({ role: 'user', content: userMessage });
   }
 
+  // Build focused wine context if chatting about a specific wine
+  let focusContext = '';
+  if (focusWineId) {
+    const focusWine = allWines.find(w => w.id === focusWineId);
+    if (focusWine) {
+      const vintageDetails = (focusWine.vintages || []).map(v => {
+        const tastings = (v.tastingEvents || []).map(t =>
+          `Rating: ${t.rating}${t.notes ? ` — "${t.notes}"` : ''} (${t.tastingDate ? new Date(t.tastingDate).toLocaleDateString() : 'no date'})`
+        ).join('\n    ');
+        const price = v.purchaseItems?.[0]?.pricePaid;
+        const enrichment = enrichmentMap.get(`${focusWine.id}-${v.vintageYear}`);
+        return `  ${v.vintageYear}:
+    ${tastings || 'Not tasted'}
+    ${v.sellerNotes ? `Gerald: "${v.sellerNotes}"` : ''}
+    ${price ? `Price: $${price}` : ''}
+    ${enrichment ? `Remi profile: ${enrichment}` : ''}`;
+      }).join('\n');
+
+      focusContext = `
+CURRENT WINE BEING DISCUSSED:
+${focusWine.name} (${focusWine.color}${focusWine.region ? ', ' + focusWine.region : ''}${focusWine.appellation ? ', ' + focusWine.appellation : ''}${focusWine.grapeVarietyOrBlend ? ', ' + focusWine.grapeVarietyOrBlend : ''})
+${vintageDetails}
+
+This is the wine Ken is asking about. Use the detailed data above to answer specifically about THIS wine. Do not confuse it with other wines in the collection.
+
+`;
+    }
+  }
+
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 800,
     system: `${REMI_PERSONA}
 
-Ken's wine collection (for reference):
+${focusContext}Ken's wine collection (for reference):
 ${collectionContext.slice(0, 40000)}
 
 When Ken asks about a specific wine, use your knowledge of that wine AND his personal notes/ratings. When referencing Gerald's seller notes, attribute them: "Gerald described it as..." When making suggestions, be specific to wines Ken owns or has tried.`,

@@ -12,9 +12,10 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   initialMessage?: string | null;
+  focusWineId?: number | null;
 }
 
-export default function RemiChat({ isOpen, onClose, initialMessage }: Props) {
+export default function RemiChat({ isOpen, onClose, initialMessage, focusWineId }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -95,7 +96,7 @@ export default function RemiChat({ isOpen, onClose, initialMessage }: Props) {
     setMessages(prev => [...prev, { id: tempId, role: 'user', content: userMsg, createdAt: new Date().toISOString() }]);
 
     try {
-      await api.remiChat(userMsg);
+      await api.remiChat(userMsg, focusWineId);
       // Reload full history
       const data = await api.remiGetChat();
       setMessages(data.messages || []);

@@ -21,12 +21,14 @@ function App() {
   const [page, setPage] = useState<Page>({ type: 'home' });
   const [chatOpen, setChatOpen] = useState(false);
   const [chatContext, setChatContext] = useState<string | null>(null);
+  const [chatFocusWineId, setChatFocusWineId] = useState<number | null>(null);
 
-  function openChatAboutWine(wineName: string, vintageYear?: number) {
+  function openChatAboutWine(wineName: string, vintageYear?: number, wineId?: number) {
     const context = vintageYear
       ? `Let's talk about my ${wineName} ${vintageYear}.`
       : `Let's talk about my ${wineName}.`;
     setChatContext(context);
+    setChatFocusWineId(wineId || null);
     setChatOpen(true);
   }
 
@@ -124,7 +126,7 @@ function App() {
       </main>
 
       {/* Remi chat */}
-      <RemiChat isOpen={chatOpen} onClose={() => { setChatOpen(false); setChatContext(null); }} initialMessage={chatContext} />
+      <RemiChat isOpen={chatOpen} onClose={() => { setChatOpen(false); setChatContext(null); setChatFocusWineId(null); }} initialMessage={chatContext} focusWineId={chatFocusWineId} />
 
       {/* Remi chat FAB — always visible */}
       {!chatOpen && (

@@ -263,8 +263,8 @@ export const api = {
     request<{ suggestions: { id: number; content: string; wineId: number | null }[] }>('/remi/suggestions', { method: 'POST' }),
   remiGetSuggestions: () =>
     request<{ suggestions: { id: number; content: string; wineId: number | null; createdAt: string }[] }>('/remi/suggestions'),
-  remiChat: (message: string) =>
-    request<{ reply: string }>('/remi/chat', { method: 'POST', body: JSON.stringify({ message }) }),
+  remiChat: (message: string, focusWineId?: number | null) =>
+    request<{ reply: string }>('/remi/chat', { method: 'POST', body: JSON.stringify({ message, focusWineId }) }),
   remiGetChat: () =>
     request<{ messages: { id: number; role: string; content: string; createdAt: string }[] }>('/remi/chat'),
   remiClearChat: () =>

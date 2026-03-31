@@ -8,7 +8,7 @@ interface Props {
   wineId: number;
   onBack: () => void;
   onNavigateWine?: (id: number) => void;
-  onChatAboutWine?: (wineName: string, vintageYear?: number) => void;
+  onChatAboutWine?: (wineName: string, vintageYear?: number, wineId?: number) => void;
 }
 
 const colorLabels: Record<string, string> = {
@@ -722,7 +722,7 @@ export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAbout
             {onChatAboutWine && (allEnrichmentTexts.length > 0 || aiText) && (
               <button
                 className="remi-continue-btn"
-                onClick={() => onChatAboutWine(wine.name, wine.vintages?.length === 1 ? wine.vintages[0].vintageYear : undefined)}
+                onClick={() => onChatAboutWine(wine.name, wine.vintages?.length === 1 ? wine.vintages[0].vintageYear : undefined, wine.id)}
               >
                 Continue with Remi
               </button>
