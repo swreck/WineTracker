@@ -135,7 +135,7 @@ function App() {
           onClick={() => setChatOpen(true)}
           title="Chat with Remi"
         >
-          <span className="remi-chat-fab-icon">R</span>
+          <span className="remi-chat-fab-icon">🍷</span>
         </button>
       )}
     </div>

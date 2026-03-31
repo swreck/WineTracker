@@ -19,11 +19,11 @@
   --color-bg-secondary: #f7f4ef;
   --color-bg-tertiary: #ede9e3;
 
-  /* Wine-tinted card backgrounds (light mode) */
-  --color-card-red: rgba(122, 46, 58, 0.05);
-  --color-card-white: rgba(180, 160, 60, 0.05);
-  --color-card-rose: rgba(200, 80, 110, 0.05);
-  --color-card-sparkling: rgba(160, 150, 120, 0.05);
+  /* Wine-tinted card backgrounds (light mode — visible in daylight) */
+  --color-card-red: rgba(122, 46, 58, 0.10);
+  --color-card-white: rgba(180, 160, 60, 0.09);
+  --color-card-rose: rgba(200, 80, 110, 0.09);
+  --color-card-sparkling: rgba(180, 200, 230, 0.10);
 
   /* Rating accent */
   --color-rating: #8b6914;
@@ -114,10 +114,10 @@
     --color-bg-tertiary: #3a3734;
 
     /* Wine-tinted card backgrounds (dark mode) */
-    --color-card-red: rgba(180, 80, 95, 0.08);
-    --color-card-white: rgba(200, 180, 80, 0.07);
-    --color-card-rose: rgba(220, 120, 150, 0.07);
-    --color-card-sparkling: rgba(190, 180, 150, 0.06);
+    --color-card-red: rgba(180, 80, 95, 0.10);
+    --color-card-white: rgba(200, 180, 80, 0.09);
+    --color-card-rose: rgba(220, 120, 150, 0.09);
+    --color-card-sparkling: rgba(180, 200, 240, 0.08);
 
     /* Rating accent */
     --color-rating: #d4a940;

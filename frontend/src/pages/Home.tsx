@@ -144,6 +144,7 @@ export default function Home({ onSelectWine, onNavigate, onOpenChat }: Props) {
               <div
                 key={s.id}
                 className="remi-suggestion-card"
+                data-has-wine={s.wineId ? 'true' : 'false'}
                 onClick={() => s.wineId ? onSelectWine(s.wineId) : onOpenChat()}
               >
                 <p className="remi-suggestion-text">{s.content}</p>

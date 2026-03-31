@@ -84,6 +84,23 @@ export default function RemiChat({ isOpen, onClose, initialMessage, focusWineId 
     }
   }
 
+  function sendStarter(text: string) {
+    setInput(text);
+    // Auto-send after a tick so the input updates first
+    setTimeout(() => {
+      const fakeInput = text;
+      setInput('');
+      setSending(true);
+      const tempId = Date.now();
+      setMessages(prev => [...prev, { id: tempId, role: 'user', content: fakeInput, createdAt: new Date().toISOString() }]);
+      api.remiChat(fakeInput, focusWineId).then(() => api.remiGetChat()).then(data => {
+        setMessages(data.messages || []);
+      }).catch(() => {
+        setMessages(prev => [...prev, { id: tempId + 1, role: 'assistant', content: 'Sorry, had trouble with that. Try again?', createdAt: new Date().toISOString() }]);
+      }).finally(() => setSending(false));
+    }, 50);
+  }
+
   async function handleSend() {
     if (!input.trim() || sending) return;
 
@@ -136,9 +153,9 @@ export default function RemiChat({ isOpen, onClose, initialMessage, focusWineId 
             <div className="remi-chat-empty">
               <p className="remi-chat-welcome">Ask me anything about your wines. I know your collection, your ratings, and the wine world.</p>
               <div className="remi-chat-starters">
-                <button onClick={() => { setInput('What should I open tonight?'); }}>What should I open tonight?</button>
-                <button onClick={() => { setInput('Tell me about my recent favorites'); }}>Tell me about my recent favorites</button>
-                <button onClick={() => { setInput('Help me plan my next case'); }}>Help me plan my next case</button>
+                <button onClick={() => sendStarter('What should I open tonight?')}>What should I open tonight?</button>
+                <button onClick={() => sendStarter('Tell me about my recent favorites')}>Tell me about my recent favorites</button>
+                <button onClick={() => sendStarter('Help me plan my next case')}>Help me plan my next case</button>
               </div>
             </div>
           ) : (

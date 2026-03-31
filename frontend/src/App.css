@@ -3919,10 +3919,8 @@ textarea:focus-visible {
 }
 
 .remi-chat-fab-icon {
-  font-family: var(--font-family-wine);
-  font-size: 22px;
-  font-weight: 700;
-  font-style: italic;
+  font-size: 24px;
+  line-height: 1;
 }
 
 /* ===== NEXT CASE ===== */
@@ -4143,6 +4141,28 @@ textarea:focus-visible {
 .wine-card-tastings {
   color: var(--color-text-tertiary);
   font-size: var(--font-size-xs);
+}
+
+/* Not available wines appear faded */
+.wine-card.not-available,
+.home-tasting-card.not-available {
+  opacity: 0.5;
+}
+
+.detail-vintage-card.not-available {
+  opacity: 0.6;
+  border-style: dashed;
+}
+
+/* Suggestion card tap affordance */
+.remi-suggestion-card[data-has-wine="true"]::after {
+  content: '›';
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-tertiary);
+  font-size: 18px;
 }
 
 /* ===== V2 WINE DETAIL ===== */
