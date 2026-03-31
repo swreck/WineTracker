@@ -16,6 +16,12 @@ router.post('/enrich', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'wineId, vintageYear, and wineName are required' });
   }
 
+  // Validate wine exists before enriching
+  const wineExists = await prisma.wine.findUnique({ where: { id: wineId } });
+  if (!wineExists) {
+    return res.status(404).json({ error: 'Wine not found in collection' });
+  }
+
   try {
     const profile = await enrichWineVintage(
       prisma, apiKey, wineId, wineName, vintageYear, color, region, appellation, grape
@@ -87,8 +93,18 @@ router.get('/enrichment/:wineId/:vintageYear', async (req: Request, res: Respons
   res.json({ profile: enrichment.profile });
 });
 
-// Generate suggestions
+// Generate suggestions (with debounce — reject if generated within last 30 seconds)
+let lastSuggestionTime = 0;
 router.post('/suggestions', async (req: Request, res: Response) => {
+  const now = Date.now();
+  if (now - lastSuggestionTime < 30000) {
+    // Return existing suggestions instead of regenerating
+    const prismaForDebounce: PrismaClient = req.app.locals.prisma;
+    const existing = await prismaForDebounce.remiSuggestion.findMany({ where: { active: true }, orderBy: { createdAt: 'desc' } });
+    return res.json({ suggestions: existing.map(s => ({ id: s.id, content: s.content, wineId: s.wineId })) });
+  }
+  lastSuggestionTime = now;
+
   const prisma: PrismaClient = req.app.locals.prisma;
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'AI service not configured' });
@@ -118,11 +134,14 @@ router.delete('/suggestions/:id', async (req: Request, res: Response) => {
   const id = parseInt(String(req.params.id));
   if (isNaN(id)) return res.status(400).json({ error: 'id must be a number' });
 
+  const suggestion = await prisma.remiSuggestion.findUnique({ where: { id } });
+  if (!suggestion) {
+    return res.status(404).json({ error: 'Suggestion not found' });
+  }
   await prisma.remiSuggestion.update({
     where: { id },
     data: { active: false },
-  }).catch(() => null);
-
+  });
   res.json({ dismissed: true });
 });
 

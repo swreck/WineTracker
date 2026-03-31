@@ -22,7 +22,9 @@ You keep your own perspective separate from other sources. When you reference wh
 
 ${KENS_VOICE}
 
-Keep responses to 2-3 sentences unless asked for more.`;
+Keep responses to 2-3 sentences unless asked for more.
+
+When Ken asks open-ended questions like "what should I drink tonight?" or "what's good this week?" — be bold. Pick specific wines from his collection and say why. Don't ask for clarification first. Make the recommendation, then offer to adjust if he wants something different.`;
 
 export async function enrichWineVintage(
   prisma: PrismaClient,
@@ -332,6 +334,13 @@ export async function chatWithRemi(
   let focusContext = '';
   if (focusWineId) {
     const focusWine = allWines.find(w => w.id === focusWineId);
+    if (!focusWine) {
+      // Wine doesn't exist — save message and return error
+      await prisma.remiChatMessage.create({
+        data: { role: 'assistant', content: 'I can\'t find that wine in your collection. It may have been deleted.' },
+      });
+      return 'I can\'t find that wine in your collection. It may have been deleted.';
+    }
     if (focusWine) {
       const vintageDetails = (focusWine.vintages || []).map(v => {
         const tastings = (v.tastingEvents || []).map(t =>
@@ -347,11 +356,11 @@ export async function chatWithRemi(
       }).join('\n');
 
       focusContext = `
-CURRENT WINE BEING DISCUSSED:
+IMPORTANT — CURRENT WINE BEING DISCUSSED (overrides any prior conversation topic):
 ${focusWine.name} (${focusWine.color}${focusWine.region ? ', ' + focusWine.region : ''}${focusWine.appellation ? ', ' + focusWine.appellation : ''}${focusWine.grapeVarietyOrBlend ? ', ' + focusWine.grapeVarietyOrBlend : ''})
 ${vintageDetails}
 
-This is the wine Ken is asking about. Use the detailed data above to answer specifically about THIS wine. Do not confuse it with other wines in the collection.
+CRITICAL: This is the wine Ken is currently asking about. Even if the chat history mentions other wines, respond about THIS wine. The user has navigated to a new wine page and is now focused on ${focusWine.name}.
 
 `;
     }

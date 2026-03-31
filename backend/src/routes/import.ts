@@ -289,8 +289,14 @@ router.post('/execute', async (req: Request, res: Response) => {
         });
         results.purchaseItemsCreated++;
 
+        // Normalize tastings: support both item.tastings array and top-level item.rating/item.notes
+        const tastings = [...(item.tastings || [])];
+        if (item.rating && !tastings.length) {
+          tastings.push({ rating: item.rating, notes: item.notes || undefined, date: new Date().toISOString() });
+        }
+
         // Create tastings
-        for (const tasting of (item.tastings || [])) {
+        for (const tasting of tastings) {
           if (tasting.rating === 0 && !tasting.notes) continue;
 
           const existingTasting = await prisma.tastingEvent.findFirst({
