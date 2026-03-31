@@ -31,6 +31,22 @@ export default function NextCase({ onSelectWine }: Props) {
     }
   }
 
+  // Themes
+  const [themes, setThemes] = useState<{ theme: string; wines: string[]; description: string }[]>([]);
+  const [themesLoading, setThemesLoading] = useState(false);
+
+  async function handleFindThemes() {
+    try {
+      setThemesLoading(true);
+      const data = await api.remiFindThemes(minRating);
+      setThemes(data.themes || []);
+    } catch {
+      // Silent
+    } finally {
+      setThemesLoading(false);
+    }
+  }
+
   // Want to Try list — stored in localStorage for now, will move to backend with Remi
   const [wantToTry, setWantToTry] = useState<{ name: string; note: string }[]>(() => {
     try {
@@ -155,11 +171,32 @@ export default function NextCase({ onSelectWine }: Props) {
           </div>
         )}
 
-        {/* Find Themes — placeholder for Remi */}
+        {/* Find Themes via Remi */}
         {wines.length >= 4 && (
-          <button className="nc-find-themes-btn" disabled>
-            Find Themes (coming with Remi)
-          </button>
+          <>
+            <button
+              className="nc-find-themes-btn"
+              onClick={handleFindThemes}
+              disabled={themesLoading}
+            >
+              {themesLoading ? 'Remi is analyzing...' : 'Find Case Themes'}
+            </button>
+            {themes.length > 0 && (
+              <div className="nc-themes">
+                {themes.map((theme, i) => (
+                  <div key={i} className="nc-theme-card">
+                    <h4 className="nc-theme-name">{theme.theme}</h4>
+                    <p className="nc-theme-desc">{theme.description}</p>
+                    <div className="nc-theme-wines">
+                      {theme.wines.map((w, j) => (
+                        <span key={j} className="nc-theme-wine">{w}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </section>
 

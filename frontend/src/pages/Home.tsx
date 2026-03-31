@@ -5,12 +5,22 @@ import type { TastingEvent, PurchaseBatch } from '../api/client';
 interface Props {
   onSelectWine: (id: number) => void;
   onNavigate: (page: string) => void;
+  onOpenChat: () => void;
 }
 
-export default function Home({ onSelectWine, onNavigate }: Props) {
+interface RemiSuggestion {
+  id: number;
+  content: string;
+  wineId: number | null;
+  createdAt?: string;
+}
+
+export default function Home({ onSelectWine, onNavigate, onOpenChat }: Props) {
   const [recentTastings, setRecentTastings] = useState<TastingEvent[]>([]);
   const [recentBatches, setRecentBatches] = useState<PurchaseBatch[]>([]);
+  const [suggestions, setSuggestions] = useState<RemiSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [showCases, setShowCases] = useState(false);
 
   useEffect(() => {
@@ -20,10 +30,12 @@ export default function Home({ onSelectWine, onNavigate }: Props) {
   async function loadData() {
     try {
       setLoading(true);
-      const [tastings, batches] = await Promise.all([
+      const [tastings, batches, sugData] = await Promise.all([
         api.getRecentTastings(5),
         api.getPurchases(),
+        api.remiGetSuggestions().catch(() => ({ suggestions: [] })),
       ]);
+
       // Deduplicate tastings by vintage ID, keep most recent
       const seen = new Set<number>();
       const deduped = tastings.filter(t => {
@@ -31,12 +43,26 @@ export default function Home({ onSelectWine, onNavigate }: Props) {
         seen.add(t.vintageId);
         return true;
       }).slice(0, 3);
+
       setRecentTastings(deduped);
       setRecentBatches(batches.slice(0, 3));
+      setSuggestions(sugData.suggestions || []);
     } catch {
       // Silent — home screen is best-effort
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function refreshSuggestions() {
+    try {
+      setSuggestionsLoading(true);
+      const data = await api.remiGenerateSuggestions();
+      setSuggestions(data.suggestions || []);
+    } catch {
+      // Silent
+    } finally {
+      setSuggestionsLoading(false);
     }
   }
 
@@ -96,12 +122,43 @@ export default function Home({ onSelectWine, onNavigate }: Props) {
         </section>
       )}
 
-      {/* Remi Suggests — placeholder for Layer 7 */}
+      {/* Remi Suggests */}
       <section className="home-section">
-        <h2 className="home-section-title">Remi Suggests</h2>
-        <div className="remi-placeholder">
-          <p className="remi-placeholder-text">Remi is getting to know your collection. Suggestions will appear here once enrichment is complete.</p>
+        <div className="remi-suggests-header">
+          <h2 className="home-section-title">
+            <span className="remi-label">Remi</span> Suggests
+          </h2>
+          <button
+            className="remi-refresh-btn"
+            onClick={refreshSuggestions}
+            disabled={suggestionsLoading}
+            title="Get fresh suggestions"
+          >
+            {suggestionsLoading ? '...' : '↻'}
+          </button>
         </div>
+
+        {suggestions.length > 0 ? (
+          <div className="remi-suggestions">
+            {suggestions.map((s) => (
+              <div
+                key={s.id}
+                className="remi-suggestion-card"
+                onClick={() => s.wineId ? onSelectWine(s.wineId) : onOpenChat()}
+              >
+                <p className="remi-suggestion-text">{s.content}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="remi-placeholder">
+            <p className="remi-placeholder-text">
+              {suggestionsLoading
+                ? 'Remi is thinking...'
+                : 'Tap ↻ to get personalized suggestions from Remi.'}
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Quick Actions */}

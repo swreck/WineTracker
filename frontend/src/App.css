@@ -4267,3 +4267,270 @@ textarea:focus-visible {
   border-left: 3px solid var(--color-text-tertiary);
   margin: var(--space-2) 0;
 }
+
+/* ===== REMI SUGGESTIONS ===== */
+.remi-suggests-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.remi-suggests-header .home-section-title {
+  margin-bottom: 0;
+}
+
+.remi-label {
+  font-family: var(--font-family-wine);
+  font-style: italic;
+  color: var(--color-primary);
+}
+
+.remi-refresh-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--color-separator-opaque);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remi-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.remi-suggestion-card {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-separator);
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.remi-suggestion-card:active {
+  transform: scale(0.98);
+}
+
+.remi-suggestion-text {
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: var(--color-text);
+  margin: 0;
+}
+
+/* ===== REMI CHAT PANEL ===== */
+.remi-chat-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  animation: fadeIn 0.15s ease;
+}
+
+.remi-chat-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 85vh;
+  background: var(--color-bg);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  display: flex;
+  flex-direction: column;
+  animation: slideInFromBottom 0.25s ease-out;
+  z-index: 101;
+}
+
+.remi-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--color-separator);
+  flex-shrink: 0;
+}
+
+.remi-chat-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.remi-chat-name {
+  font-family: var(--font-family-wine);
+  font-weight: 700;
+  font-style: italic;
+  font-size: var(--font-size-lg);
+  color: var(--color-primary);
+}
+
+.remi-chat-subtitle {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.remi-chat-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remi-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.remi-chat-loading, .remi-chat-empty {
+  text-align: center;
+  color: var(--color-text-tertiary);
+  padding: var(--space-8) var(--space-4);
+}
+
+.remi-chat-welcome {
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-4);
+}
+
+.remi-chat-starters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.remi-chat-starters button {
+  padding: var(--space-3);
+  border: 1px solid var(--color-separator-opaque);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  min-height: 44px;
+}
+
+.remi-chat-msg {
+  max-width: 85%;
+}
+
+.remi-chat-msg.user {
+  align-self: flex-end;
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+  border-radius: var(--radius-lg) var(--radius-lg) var(--radius-sm) var(--radius-lg);
+  padding: var(--space-3);
+}
+
+.remi-chat-msg.assistant {
+  align-self: flex-start;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-separator);
+  border-radius: var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-sm);
+  padding: var(--space-3);
+}
+
+.remi-chat-msg-label {
+  font-family: var(--font-family-wine);
+  font-style: italic;
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  display: block;
+  margin-bottom: var(--space-1);
+}
+
+.remi-chat-msg-text {
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.remi-typing {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+.remi-chat-input-area {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) calc(var(--space-4) + var(--safe-bottom));
+  border-top: 1px solid var(--color-separator);
+  background: var(--color-bg-elevated);
+  flex-shrink: 0;
+}
+
+.remi-chat-input {
+  flex: 1;
+  padding: var(--space-3);
+  border: 1px solid var(--color-separator-opaque);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+  min-height: 44px;
+}
+
+.remi-chat-send {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+  font-weight: 500;
+  min-height: 44px;
+}
+
+/* ===== THEME CARDS ===== */
+.nc-themes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.nc-theme-card {
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-separator);
+}
+
+.nc-theme-name {
+  font-family: var(--font-family-wine);
+  font-size: var(--font-size-md);
+  margin-bottom: var(--space-2);
+}
+
+.nc-theme-desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin-bottom: var(--space-3);
+}
+
+.nc-theme-wines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.nc-theme-wine {
+  font-size: var(--font-size-xs);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+}

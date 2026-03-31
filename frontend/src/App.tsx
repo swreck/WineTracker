@@ -5,6 +5,7 @@ import WineDetail from './pages/WineDetail';
 import Import from './pages/Import';
 import QuickTasting from './pages/QuickTasting';
 import NextCase from './pages/NextCase';
+import RemiChat from './components/RemiChat';
 import { NavigationProvider } from './context/NavigationContext';
 import './App.css';
 
@@ -18,6 +19,7 @@ type Page =
 
 function App() {
   const [page, setPage] = useState<Page>({ type: 'home' });
+  const [chatOpen, setChatOpen] = useState(false);
 
   const navigate = (newPage: Page) => setPage(newPage);
 
@@ -71,6 +73,7 @@ function App() {
           <Home
             onSelectWine={(id) => navigate({ type: 'wine', id })}
             onNavigate={handleHomeNavigate}
+            onOpenChat={() => setChatOpen(true)}
           />
         )}
         {page.type === 'wines' && (
@@ -110,14 +113,19 @@ function App() {
         )}
       </main>
 
-      {/* Remi chat icon — always visible, placeholder for Layer 7 */}
-      <button
-        className="remi-chat-fab"
-        onClick={() => {/* TODO: open Remi chat */}}
-        title="Chat with Remi"
-      >
-        <span className="remi-chat-fab-icon">R</span>
-      </button>
+      {/* Remi chat */}
+      <RemiChat isOpen={chatOpen} onClose={() => setChatOpen(false)} />
+
+      {/* Remi chat FAB — always visible */}
+      {!chatOpen && (
+        <button
+          className="remi-chat-fab"
+          onClick={() => setChatOpen(true)}
+          title="Chat with Remi"
+        >
+          <span className="remi-chat-fab-icon">R</span>
+        </button>
+      )}
     </div>
     </NavigationProvider>
   );
