@@ -152,7 +152,7 @@ router.post('/chat', async (req: Request, res: Response) => {
   if (!apiKey) return res.status(500).json({ error: 'AI service not configured' });
 
   const { message, focusWineId } = req.body;
-  if (!message || typeof message !== 'string') {
+  if (!message || typeof message !== 'string' || !message.trim()) {
     return res.status(400).json({ error: 'message is required' });
   }
 
