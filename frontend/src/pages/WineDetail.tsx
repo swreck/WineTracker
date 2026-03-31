@@ -508,22 +508,22 @@ export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
           </div>
         ) : (
           <>
-            <h2>{wine.name}</h2>
-            <div className="wine-meta">
-              <span className={`color-badge ${wine.color}`}>{colorLabels[wine.color]}</span>
-              {wine.region && <span>{wine.region}</span>}
-              {wine.appellation && <span>{wine.appellation}</span>}
-              {wine.grapeVarietyOrBlend && <span>{wine.grapeVarietyOrBlend}</span>}
+            <h2 className="wine-name-serif wine-detail-name">{wine.name}</h2>
+            <div className="wine-identity">
+              <span className={`color-dot ${wine.color}`} />
+              <span className="wine-identity-text">
+                {[colorLabels[wine.color], wine.region, wine.appellation, wine.grapeVarietyOrBlend].filter(Boolean).join(' · ')}
+              </span>
             </div>
             <div className="button-group">
               <button className="edit-button" onClick={() => setEditing(true)}>
-                Edit Wine
+                Edit
               </button>
               <button className="delete-button" onClick={handleDelete}>
-                Delete Wine
+                Delete
               </button>
-              <button className="tell-me-more-button" onClick={onTellMeMoreClick} disabled={aiLoading}>
-                {aiLoading ? 'Thinking...' : 'More...'}
+              <button className="remi-profile-button" onClick={onTellMeMoreClick} disabled={aiLoading}>
+                {aiLoading ? 'Remi is thinking...' : 'Ask Remi'}
               </button>
             </div>
             {showVintagePicker && wine.vintages && (
@@ -543,15 +543,19 @@ export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
               </div>
             )}
             {aiLoading && (
-              <div className="ai-response-area">
+              <div className="remi-profile-area">
+                <div className="remi-profile-label">Remi</div>
                 <div className="ai-loading-spinner" />
               </div>
             )}
             {aiText && !aiLoading && (
-              <div className="ai-response-area">
-                <button className="ai-dismiss" onClick={() => setAiText(null)} title="Dismiss">×</button>
+              <div className="remi-profile-area">
+                <div className="remi-profile-header">
+                  <span className="remi-profile-label">Remi</span>
+                  <button className="ai-dismiss" onClick={() => setAiText(null)} title="Dismiss">×</button>
+                </div>
                 {aiText.split('\n\n').map((paragraph, i) => (
-                  <p key={i} className="ai-paragraph">{paragraph}</p>
+                  <p key={i} className="remi-paragraph">{paragraph}</p>
                 ))}
               </div>
             )}
@@ -648,9 +652,9 @@ export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
                       )}
                     </div>
 
-                    {/* Seller notes */}
-                    <div className="vintage-field">
-                      <strong>Seller Notes:</strong>
+                    {/* Gerald's notes */}
+                    <div className="vintage-field gerald-notes-section">
+                      <strong>Gerald's Notes:</strong>
                       {editingSellerNotes === vintage.id ? (
                         <div className="inline-edit">
                           <textarea
@@ -871,13 +875,15 @@ export default function WineDetail({ wineId, onBack, onNavigateWine }: Props) {
                                 </div>
                               ) : (
                                 <>
-                                  <div className="tasting-header">
-                                    <span className="tasting-date">{tasting.tastingDate ? formatDate(tasting.tastingDate) : '(no date)'}</span>
-                                    <span className="rating">{Number(tasting.rating).toFixed(1)}</span>
-                                    <button className="edit-inline-btn" onClick={() => startEditTasting(tasting)} title="Edit">✎</button>
-                                    <button className="delete-inline-btn" onClick={() => handleDeleteTasting(tasting.id)} title="Delete">×</button>
+                                  <div className="tasting-journal-header">
+                                    <span className="tasting-journal-date">{tasting.tastingDate ? formatDate(tasting.tastingDate) : '(no date)'}</span>
+                                    <span className="tasting-journal-rating">{Number(tasting.rating).toFixed(1)}</span>
+                                    <div className="tasting-journal-actions">
+                                      <button className="edit-inline-btn" onClick={() => startEditTasting(tasting)} title="Edit">✎</button>
+                                      <button className="delete-inline-btn" onClick={() => handleDeleteTasting(tasting.id)} title="Delete">×</button>
+                                    </div>
                                   </div>
-                                  {tasting.notes && <p className="tasting-notes">{tasting.notes}</p>}
+                                  {tasting.notes && <p className="tasting-journal-notes">{tasting.notes}</p>}
                                 </>
                               )}
                             </div>

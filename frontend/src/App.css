@@ -4144,3 +4144,126 @@ textarea:focus-visible {
   color: var(--color-text-tertiary);
   font-size: var(--font-size-xs);
 }
+
+/* ===== V2 WINE DETAIL ===== */
+.wine-detail-name {
+  font-size: var(--font-size-2xl);
+  line-height: 1.2;
+  margin-bottom: var(--space-2);
+}
+
+.wine-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.color-dot.red { background: #7a2e3a; }
+.color-dot.white { background: #c4a820; }
+.color-dot.rose { background: #c85070; }
+.color-dot.sparkling { background: #a09870; }
+
+@media (prefers-color-scheme: dark) {
+  .color-dot.red { background: #d4838e; }
+  .color-dot.white { background: #d4c880; }
+  .color-dot.rose { background: #e0a0b8; }
+  .color-dot.sparkling { background: #c4b890; }
+}
+
+.wine-identity-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.remi-profile-button {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-separator-opaque);
+  color: var(--color-text);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  min-height: 36px;
+}
+
+/* Remi profile area */
+.remi-profile-area {
+  margin: var(--space-4) 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-separator);
+}
+
+.remi-profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.remi-profile-label {
+  font-family: var(--font-family-wine);
+  font-weight: 700;
+  font-style: italic;
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+}
+
+.remi-paragraph {
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  margin: var(--space-2) 0 0;
+}
+
+/* Tasting journal entries */
+.tasting-journal-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-1);
+}
+
+.tasting-journal-date {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tasting-journal-rating {
+  font-weight: 700;
+  color: var(--color-rating);
+  font-size: var(--font-size-base);
+}
+
+.tasting-journal-actions {
+  margin-left: auto;
+  display: flex;
+  gap: var(--space-1);
+}
+
+.tasting-journal-notes {
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+  color: var(--color-text);
+  margin: 0;
+  padding-left: 0;
+}
+
+/* Gerald's notes — visually distinct */
+.gerald-notes-section {
+  background: var(--color-bg-secondary);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--color-text-tertiary);
+  margin: var(--space-2) 0;
+}
