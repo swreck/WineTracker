@@ -137,6 +137,25 @@ export default function WinesList({ onSelectWine, filterWineIds }: Props) {
     return Math.max(...wine.vintages.map(v => v.vintageYear));
   }
 
+  function getLatestNote(wine: Wine): string | undefined {
+    if (!wine.vintages) return undefined;
+    for (const v of wine.vintages) {
+      if (v.tastingEvents && v.tastingEvents.length > 0) {
+        const sorted = [...v.tastingEvents].sort((a, b) =>
+          new Date(b.tastingDate || 0).getTime() - new Date(a.tastingDate || 0).getTime()
+        );
+        if (sorted[0]?.notes) return sorted[0].notes;
+      }
+    }
+    return undefined;
+  }
+
+  function truncateNote(note: string | undefined, maxLen = 70): string {
+    if (!note) return '';
+    if (note.length <= maxLen) return note;
+    return note.slice(0, maxLen).replace(/\s+\S*$/, '') + '...';
+  }
+
   function getVintageYears(wine: Wine): string {
     if (!wine.vintages || wine.vintages.length === 0) return '-';
     const years = wine.vintages.map(v => v.vintageYear).sort((a, b) => b - a);
@@ -223,17 +242,8 @@ export default function WinesList({ onSelectWine, filterWineIds }: Props) {
     updateWinesListState({ filteredWineIds: ids });
   }, [filteredAndSortedWines, updateWinesListState]);
 
-  function toggleExpand(wineId: number) {
-    setExpandedWines(prev => {
-      const next = new Set(prev);
-      if (next.has(wineId)) {
-        next.delete(wineId);
-      } else {
-        next.add(wineId);
-      }
-      return next;
-    });
-  }
+  // toggleExpand preserved for potential future use
+  void setExpandedWines; // suppress unused warning
 
   function clearVintageFilter() {
     setVintageMin('');
@@ -305,23 +315,6 @@ export default function WinesList({ onSelectWine, filterWineIds }: Props) {
       ).slice(0, 5)
     : [];
 
-  function SortHeader({ field, label }: { field: SortField; label: string }) {
-    const isActive = sortField === field;
-    return (
-      <th
-        onClick={() => toggleSort(field)}
-        className={`sortable ${isActive ? 'active' : ''}`}
-      >
-        {label}
-        {isActive && (
-          <span className="sort-indicator">
-            {sortDir === 'asc' ? ' ▲' : ' ▼'}
-          </span>
-        )}
-      </th>
-    );
-  }
-
   // Generate year options for vintage filter
   const currentYear = new Date().getFullYear();
   const yearOptions = [];
@@ -336,50 +329,48 @@ export default function WinesList({ onSelectWine, filterWineIds }: Props) {
 
   return (
     <div className="wines-list">
-      <div className="filters">
+      <div className="filters-v2">
         <SearchWithHistory
           value={search}
           onChange={setSearch}
           placeholder="Search wines..."
           className="search-input"
         />
-        <select
-          value={colorFilter}
-          onChange={(e) => setColorFilter(e.target.value)}
-          className="color-filter"
-        >
-          <option value="">All Colors</option>
-          <option value="red">Red</option>
-          <option value="white">White</option>
-          <option value="rose">Rosé</option>
-          <option value="sparkling">Sparkling</option>
-        </select>
-        <select
-          value={sourceFilter}
-          onChange={(e) => setSourceFilter(e.target.value)}
-          className="source-filter"
-        >
-          <option value="">All Sources</option>
-          <option value="weimax">Weimax</option>
-          <option value="costco">Costco</option>
-          <option value="other">Other</option>
-        </select>
-        <button
-          className={`vintage-filter-btn ${hasVintageFilter ? 'active' : ''}`}
-          onClick={() => setShowVintageFilter(!showVintageFilter)}
-        >
-          {hasVintageFilter
-            ? `${vintageMin || 'Any'} - ${vintageMax || 'Any'}`
-            : 'Vintages'}
-        </button>
-        <label className={`available-only-toggle ${availableOnly ? 'active' : ''}`}>
-          <input
-            type="checkbox"
-            checked={availableOnly}
-            onChange={(e) => setAvailableOnly(e.target.checked)}
-          />
-          Available only
-        </label>
+        <div className="filter-row">
+          <select
+            value={colorFilter}
+            onChange={(e) => setColorFilter(e.target.value)}
+            className="filter-select"
+          >
+            <option value="">Color</option>
+            <option value="red">Red</option>
+            <option value="white">White</option>
+            <option value="rose">Rosé</option>
+            <option value="sparkling">Sparkling</option>
+          </select>
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value)}
+            className="filter-select"
+          >
+            <option value="">Source</option>
+            <option value="weimax">Weimax</option>
+            <option value="costco">Costco</option>
+            <option value="other">Other</option>
+          </select>
+          <button
+            className={`filter-select-btn ${hasVintageFilter ? 'active' : ''}`}
+            onClick={() => setShowVintageFilter(!showVintageFilter)}
+          >
+            {hasVintageFilter ? `${vintageMin || '?'}–${vintageMax || '?'}` : 'Years'}
+          </button>
+          <button
+            className={`filter-select-btn ${availableOnly ? 'active' : ''}`}
+            onClick={() => setAvailableOnly(!availableOnly)}
+          >
+            Avail
+          </button>
+        </div>
       </div>
 
       {showVintageFilter && (
@@ -423,6 +414,47 @@ export default function WinesList({ onSelectWine, filterWineIds }: Props) {
         </div>
       )}
 
+      {/* Sort bar */}
+      <div className="sort-bar">
+        <span className="sort-label">Sort:</span>
+        {(['name', 'rating', 'price', 'vintage'] as SortField[]).map(field => (
+          <button
+            key={field}
+            className={`sort-chip ${sortField === field ? 'active' : ''}`}
+            onClick={() => toggleSort(field)}
+          >
+            {field === 'name' ? 'Name' : field === 'rating' ? 'Rating' : field === 'price' ? 'Price' : 'Vintage'}
+            {sortField === field && <span className="sort-dir">{sortDir === 'asc' ? ' ▲' : ' ▼'}</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* Active filter chips */}
+      {(colorFilter || sourceFilter || vintageMin || vintageMax || availableOnly) && (
+        <div className="active-filters">
+          {colorFilter && (
+            <button className="filter-chip" onClick={() => setColorFilter('')}>
+              {colorLabels[colorFilter]} ✕
+            </button>
+          )}
+          {sourceFilter && (
+            <button className="filter-chip" onClick={() => setSourceFilter('')}>
+              {sourceFilter} ✕
+            </button>
+          )}
+          {(vintageMin || vintageMax) && (
+            <button className="filter-chip" onClick={clearVintageFilter}>
+              {vintageMin || 'Any'}–{vintageMax || 'Any'} ✕
+            </button>
+          )}
+          {availableOnly && (
+            <button className="filter-chip" onClick={() => setAvailableOnly(false)}>
+              Available ✕
+            </button>
+          )}
+        </div>
+      )}
+
       {filteredAndSortedWines.length === 0 ? (
         <div className="empty">
           {wines.length === 0
@@ -430,128 +462,54 @@ export default function WinesList({ onSelectWine, filterWineIds }: Props) {
             : 'No wines match your filters.'}
         </div>
       ) : (
-        <table className="wines-table">
-          <thead>
-            <tr>
-              <SortHeader field="name" label="Wine" />
-              <SortHeader field="vintage" label="Vintage" />
-              <SortHeader field="price" label="Price" />
-              <SortHeader field="rating" label="Rating" />
-              <SortHeader field="tastings" label="Tastings" />
-              <th>Color</th>
-              <th className="actions-col"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredAndSortedWines.map((wine, index) => {
-              const hasMultipleVintages = wine.vintages && wine.vintages.length > 1;
-              const isExpanded = expandedWines.has(wine.id);
-              const latestPrice = getLatestPrice(wine);
+        <div className="wine-cards">
+          {filteredAndSortedWines.map((wine, index) => {
+            const latestPrice = getLatestPrice(wine);
 
-              // Track first wine of each letter for alphabetical jump
-              const firstLetter = wine.name.charAt(0).toUpperCase();
-              const normalizedLetter = /[A-Z]/.test(firstLetter) ? firstLetter : '#';
-              const prevLetter = index > 0
-                ? (() => {
-                    const prev = filteredAndSortedWines[index - 1].name.charAt(0).toUpperCase();
-                    return /[A-Z]/.test(prev) ? prev : '#';
-                  })()
-                : null;
-              const isFirstOfLetter = normalizedLetter !== prevLetter;
+            // Track first wine of each letter for alphabetical jump
+            const firstLetter = wine.name.charAt(0).toUpperCase();
+            const normalizedLetter = /[A-Z]/.test(firstLetter) ? firstLetter : '#';
+            const prevLetter = index > 0
+              ? (() => {
+                  const prev = filteredAndSortedWines[index - 1].name.charAt(0).toUpperCase();
+                  return /[A-Z]/.test(prev) ? prev : '#';
+                })()
+              : null;
+            const isFirstOfLetter = normalizedLetter !== prevLetter;
 
-              const handleRowClick = (_e: React.MouseEvent) => {
-                // Allow text selection - don't navigate if user is selecting text
-                const selection = window.getSelection();
-                if (selection && selection.toString().length > 0) return;
+            // Get latest tasting note
+            const latestNote = getLatestNote(wine);
 
-                if (hasMultipleVintages) {
-                  toggleExpand(wine.id);
-                } else {
-                  // Go to wine detail (vintage is expanded inline there)
+            return (
+              <div
+                key={wine.id}
+                ref={isFirstOfLetter ? (el) => {
+                  if (el) letterRefs.current.set(normalizedLetter, el as unknown as HTMLTableRowElement);
+                } : undefined}
+                className={`wine-card card-tint-${wine.color}`}
+                onClick={() => {
                   saveScrollPosition();
                   onSelectWine(wine.id);
-                }
-              };
-
-              return (
-                <>
-                  <tr
-                    key={wine.id}
-                    ref={isFirstOfLetter ? (el) => {
-                      if (el) letterRefs.current.set(normalizedLetter, el);
-                    } : undefined}
-                    onClick={handleRowClick}
-                    className={hasMultipleVintages ? 'expandable' : ''}
-                  >
-                    <td className="wine-name-cell">
-                      {hasMultipleVintages && (
-                        <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span>
-                      )}
-                      <span className="wine-name">{wine.name}</span>
-                    </td>
-                    <td>{getVintageYears(wine)}</td>
-                    <td>{latestPrice ? `$${latestPrice}` : '-'}</td>
-                    <td>
-                      {wine.averageRating ? (
-                        <span className="rating">{wine.averageRating.toFixed(1)}</span>
-                      ) : (
-                        '-'
-                      )}
-                    </td>
-                    <td>{wine.tastingCount || 0}</td>
-                    <td>
-                      <span className={`color-badge ${wine.color}`}>
-                        {colorLabels[wine.color]}
-                      </span>
-                    </td>
-                    <td className="actions-cell">
-                      <button
-                        className="merge-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setMergeSource(wine);
-                          setMergeSearch('');
-                        }}
-                        title="Merge with another wine"
-                      >
-                        Merge
-                      </button>
-                    </td>
-                  </tr>
-                  {isExpanded && wine.vintages && wine.vintages.map((vintage) => {
-                    const vintagePrice = vintage.purchaseItems?.[0]?.pricePaid;
-                    const avgRating = vintage.tastingEvents && vintage.tastingEvents.length > 0
-                      ? vintage.tastingEvents.reduce((sum, t) => sum + Number(t.rating), 0) / vintage.tastingEvents.length
-                      : null;
-
-                    return (
-                      <tr
-                        key={`vintage-${vintage.id}`}
-                        className="vintage-row"
-                        onClick={() => {
-                          saveScrollPosition();
-                          onSelectWine(wine.id);
-                        }}
-                      >
-                        <td className="vintage-indent">↳ {vintage.vintageYear}</td>
-                        <td></td>
-                        <td>{vintagePrice ? `$${Number(vintagePrice)}` : '-'}</td>
-                        <td>
-                          {avgRating ? (
-                            <span className="rating">{avgRating.toFixed(1)}</span>
-                          ) : '-'}
-                        </td>
-                        <td>{vintage.tastingEvents?.length || 0}</td>
-                        <td></td>
-                        <td></td>
-                      </tr>
-                    );
-                  })}
-                </>
-              );
-            })}
-          </tbody>
-        </table>
+                }}
+              >
+                <div className="wine-card-header">
+                  <span className="wine-name-serif">{wine.name}</span>
+                </div>
+                <div className="wine-card-meta">
+                  <span className="wine-card-vintage">{getVintageYears(wine)}</span>
+                  {wine.averageRating ? (
+                    <span className="wine-card-rating">{wine.averageRating.toFixed(1)}</span>
+                  ) : null}
+                  {latestPrice ? <span className="wine-card-price">${latestPrice}</span> : null}
+                  {(wine.tastingCount || 0) > 0 && (
+                    <span className="wine-card-tastings">{wine.tastingCount} tasting{wine.tastingCount !== 1 ? 's' : ''}</span>
+                  )}
+                </div>
+                {latestNote && <p className="wine-card-note">{truncateNote(latestNote)}</p>}
+              </div>
+            );
+          })}
+        </div>
       )}
 
       <div className="list-summary">
