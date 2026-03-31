@@ -91,6 +91,36 @@ model TastingEvent {
   @@map("tasting_events")
 }
 
+model RemiEnrichment {
+  id          Int      @id @default(autoincrement())
+  wineId      Int      @map("wine_id")
+  vintageYear Int      @map("vintage_year")
+  profile     String   // Remi's 2-3 sentence profile of this wine+vintage
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([wineId, vintageYear])
+  @@map("remi_enrichments")
+}
+
+model RemiChatMessage {
+  id        Int      @id @default(autoincrement())
+  role      String   // 'user' or 'assistant'
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("remi_chat_messages")
+}
+
+model RemiSuggestion {
+  id        Int      @id @default(autoincrement())
+  content   String   // The suggestion text
+  wineId    Int?     @map("wine_id")  // Optional link to a specific wine
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("remi_suggestions")
+}
+
 model ParseCorrection {
   id          Int      @id @default(autoincrement())
   mode        String   // 'receipt' or 'label'

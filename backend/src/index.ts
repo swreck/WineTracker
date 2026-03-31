@@ -9,6 +9,7 @@ import tastingsRouter from './routes/tastings';
 import purchasesRouter from './routes/purchases';
 import importRouter from './routes/import';
 import aiRouter from './routes/ai';
+import remiRouter from './routes/remi';
 import { warmupDatabase, withRetry } from './utils/db';
 
 const app = express();
@@ -52,6 +53,7 @@ app.use('/api/tastings', tastingsRouter);
 app.use('/api/purchases', purchasesRouter);
 app.use('/api/import', importRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/remi', remiRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

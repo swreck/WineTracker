@@ -252,6 +252,24 @@ export const api = {
   saveCorrections: (corrections: { fieldName: string; wrongValue: string; correctValue: string; originalText?: string }[], mode: string) =>
     request<{ success: boolean }>('/import/corrections', { method: 'POST', body: JSON.stringify({ corrections, mode }) }),
 
+  // Remi
+  remiEnrich: (data: { wineId: number; vintageYear: number; wineName: string; color: string; region?: string; appellation?: string; grape?: string }) =>
+    request<{ profile: string }>('/remi/enrich', { method: 'POST', body: JSON.stringify(data) }),
+  remiEnrichAll: () =>
+    request<{ enriched: number; skipped: number }>('/remi/enrich-all', { method: 'POST' }),
+  remiGetEnrichment: (wineId: number, vintageYear: number) =>
+    request<{ profile: string }>(`/remi/enrichment/${wineId}/${vintageYear}`),
+  remiGenerateSuggestions: () =>
+    request<{ suggestions: { id: number; content: string; wineId: number | null }[] }>('/remi/suggestions', { method: 'POST' }),
+  remiGetSuggestions: () =>
+    request<{ suggestions: { id: number; content: string; wineId: number | null; createdAt: string }[] }>('/remi/suggestions'),
+  remiChat: (message: string) =>
+    request<{ reply: string }>('/remi/chat', { method: 'POST', body: JSON.stringify({ message }) }),
+  remiGetChat: () =>
+    request<{ messages: { id: number; role: string; content: string; createdAt: string }[] }>('/remi/chat'),
+  remiFindThemes: (minRating?: number) =>
+    request<{ themes: { theme: string; wines: string[]; description: string }[] }>('/remi/themes', { method: 'POST', body: JSON.stringify({ minRating }) }),
+
   // AI
   tellMeMore: (data: { wineName: string; vintageYear?: number; color?: string; region?: string; appellation?: string; grapeVarietyOrBlend?: string }) =>
     request<{ text: string }>('/ai/tell-me-more', { method: 'POST', body: JSON.stringify(data) }),
