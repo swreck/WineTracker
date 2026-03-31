@@ -255,10 +255,28 @@ export async function chatWithRemi(
 
   const client = new Anthropic({ apiKey });
 
-  const messages = history.map(m => ({
+  // Ensure proper message alternation (user/assistant/user/assistant)
+  // Anthropic requires messages to alternate and end with 'user'
+  const rawMessages = history.map(m => ({
     role: m.role as 'user' | 'assistant',
     content: m.content,
   }));
+
+  // Merge consecutive same-role messages and ensure alternation
+  const messages: { role: 'user' | 'assistant'; content: string }[] = [];
+  for (const msg of rawMessages) {
+    if (messages.length > 0 && messages[messages.length - 1].role === msg.role) {
+      // Merge with previous message of same role
+      messages[messages.length - 1].content += '\n' + msg.content;
+    } else {
+      messages.push({ ...msg });
+    }
+  }
+
+  // Ensure it ends with user message (the one we just added)
+  if (messages.length > 0 && messages[messages.length - 1].role !== 'user') {
+    messages.push({ role: 'user', content: userMessage });
+  }
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6',
