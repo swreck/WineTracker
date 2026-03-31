@@ -14,10 +14,19 @@
   --color-warning: #f57c00;
   --color-warning-subtle: rgba(245, 124, 0, 0.06);
 
-  --color-bg: #f2f0ed;
-  --color-bg-elevated: #ffffff;
-  --color-bg-secondary: #f7f5f3;
-  --color-bg-tertiary: #ece9e5;
+  --color-bg: #f4f1ec;
+  --color-bg-elevated: #fefdfb;
+  --color-bg-secondary: #f7f4ef;
+  --color-bg-tertiary: #ede9e3;
+
+  /* Wine-tinted card backgrounds (light mode) */
+  --color-card-red: rgba(122, 46, 58, 0.05);
+  --color-card-white: rgba(180, 160, 60, 0.05);
+  --color-card-rose: rgba(200, 80, 110, 0.05);
+  --color-card-sparkling: rgba(160, 150, 120, 0.05);
+
+  /* Rating accent */
+  --color-rating: #8b6914;
 
   --color-text: #1c1917;
   --color-text-secondary: #6b665e;
@@ -44,6 +53,7 @@
 
   /* Typography */
   --font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+  --font-family-wine: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
   --font-size-xs: 12px;
   --font-size-sm: 13px;
   --font-size-base: 15px;
@@ -98,10 +108,19 @@
     --color-warning: #ffa726;
     --color-warning-subtle: rgba(255, 167, 38, 0.1);
 
-    --color-bg: #0f0f0f;
-    --color-bg-elevated: #1c1c1e;
-    --color-bg-secondary: #2c2c2e;
-    --color-bg-tertiary: #3a3a3c;
+    --color-bg: #121110;
+    --color-bg-elevated: #1e1c1a;
+    --color-bg-secondary: #2a2826;
+    --color-bg-tertiary: #3a3734;
+
+    /* Wine-tinted card backgrounds (dark mode) */
+    --color-card-red: rgba(180, 80, 95, 0.08);
+    --color-card-white: rgba(200, 180, 80, 0.07);
+    --color-card-rose: rgba(220, 120, 150, 0.07);
+    --color-card-sparkling: rgba(190, 180, 150, 0.06);
+
+    /* Rating accent */
+    --color-rating: #d4a940;
 
     --color-text: #f2efeb;
     --color-text-secondary: #a8a29e;

@@ -108,7 +108,8 @@
       "Bash(\"/Users/kenrosen/Library/CloudStorage/Dropbox/KR Personal/Dev_Projects/BUFilesSetupByClaude/backup-databases.sh\")",
       "Bash(launchctl load:*)",
       "Bash(launchctl list:*)",
-      "Bash(do curl:*)"
+      "Bash(do curl:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }

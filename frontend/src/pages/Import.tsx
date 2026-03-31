@@ -4,6 +4,7 @@ import type { ImportPreview, ImportResult } from '../api/client';
 
 interface Props {
   onComplete: (wineIds?: number[], goToTasting?: boolean) => void;
+  initialMode?: ImportMode;
 }
 
 type Stage = 'input' | 'preview' | 'complete';
@@ -34,10 +35,10 @@ const colorLabels: Record<string, string> = {
   sparkling: 'Sparkling',
 };
 
-export default function Import({ onComplete }: Props) {
+export default function Import({ onComplete, initialMode }: Props) {
   const [stage, setStage] = useState<Stage>('input');
   const [text, setText] = useState('');
-  const [mode, setMode] = useState<ImportMode>('receipt');
+  const [mode, setMode] = useState<ImportMode>(initialMode || 'receipt');
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [loading, setLoading] = useState(false);

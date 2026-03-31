@@ -1,58 +1,78 @@
 import { useState } from 'react';
+import Home from './pages/Home';
 import WinesList from './pages/WinesList';
 import WineDetail from './pages/WineDetail';
 import Import from './pages/Import';
-import Favorites from './pages/Favorites';
 import QuickTasting from './pages/QuickTasting';
+import NextCase from './pages/NextCase';
 import { NavigationProvider } from './context/NavigationContext';
 import './App.css';
 
 type Page =
+  | { type: 'home' }
   | { type: 'wines'; filterWineIds?: number[] }
   | { type: 'wine'; id: number }
-  | { type: 'import' }
-  | { type: 'favorites' }
+  | { type: 'import'; initialMode?: 'receipt' | 'label' | 'manual' }
+  | { type: 'next-case' }
   | { type: 'quick-tasting' };
 
 function App() {
-  const [page, setPage] = useState<Page>({ type: 'wines' });
+  const [page, setPage] = useState<Page>({ type: 'home' });
 
   const navigate = (newPage: Page) => setPage(newPage);
+
+  // Helper for Home's simple string-based navigation
+  function handleHomeNavigate(target: string) {
+    switch (target) {
+      case 'wines': navigate({ type: 'wines' }); break;
+      case 'import': navigate({ type: 'import' }); break;
+      case 'import-label': navigate({ type: 'import', initialMode: 'label' }); break;
+      case 'quick-tasting': navigate({ type: 'quick-tasting' }); break;
+      case 'next-case': navigate({ type: 'next-case' }); break;
+      default: navigate({ type: 'home' });
+    }
+  }
 
   return (
     <NavigationProvider>
     <div className="app">
       <header className="header">
-        <h1 onClick={() => navigate({ type: 'wines' })}>Wine Tracker</h1>
+        <h1 className="header-title" onClick={() => navigate({ type: 'home' })}>Wine Tracker</h1>
         <nav>
           <button
-            className={page.type === 'wines' ? 'active' : ''}
+            className={page.type === 'home' ? 'active' : ''}
+            onClick={() => navigate({ type: 'home' })}
+          >
+            Home
+          </button>
+          <button
+            className={page.type === 'wines' || page.type === 'wine' ? 'active' : ''}
             onClick={() => navigate({ type: 'wines' })}
           >
             Wines
           </button>
           <button
-            className={page.type === 'favorites' ? 'active' : ''}
-            onClick={() => navigate({ type: 'favorites' })}
+            className={page.type === 'next-case' ? 'active' : ''}
+            onClick={() => navigate({ type: 'next-case' })}
           >
-            Favorites
+            Next Case
           </button>
           <button
-            className={page.type === 'quick-tasting' ? 'active' : ''}
-            onClick={() => navigate({ type: 'quick-tasting' })}
-          >
-            + Tasting
-          </button>
-          <button
-            className={page.type === 'import' ? 'active' : ''}
+            className={page.type === 'import' || page.type === 'quick-tasting' ? 'active' : ''}
             onClick={() => navigate({ type: 'import' })}
           >
-            Import
+            Add
           </button>
         </nav>
       </header>
 
       <main className="main">
+        {page.type === 'home' && (
+          <Home
+            onSelectWine={(id) => navigate({ type: 'wine', id })}
+            onNavigate={handleHomeNavigate}
+          />
+        )}
         {page.type === 'wines' && (
           <WinesList
             onSelectWine={(id) => navigate({ type: 'wine', id })}
@@ -67,25 +87,37 @@ function App() {
           />
         )}
         {page.type === 'import' && (
-          <Import onComplete={(wineIds, goToTasting) => {
-            if (goToTasting && wineIds && wineIds.length > 0) {
-              navigate({ type: 'wine', id: wineIds[0] });
-            } else {
-              navigate({ type: 'wines' });
-            }
-          }} />
+          <Import
+            initialMode={page.initialMode}
+            onComplete={(wineIds, goToTasting) => {
+              if (goToTasting && wineIds && wineIds.length > 0) {
+                navigate({ type: 'wine', id: wineIds[0] });
+              } else {
+                navigate({ type: 'home' });
+              }
+            }}
+          />
         )}
-        {page.type === 'favorites' && (
-          <Favorites
+        {page.type === 'next-case' && (
+          <NextCase
             onSelectWine={(id) => navigate({ type: 'wine', id })}
           />
         )}
         {page.type === 'quick-tasting' && (
           <QuickTasting
-            onCancel={() => navigate({ type: 'wines' })}
+            onCancel={() => navigate({ type: 'home' })}
           />
         )}
       </main>
+
+      {/* Remi chat icon — always visible, placeholder for Layer 7 */}
+      <button
+        className="remi-chat-fab"
+        onClick={() => {/* TODO: open Remi chat */}}
+        title="Chat with Remi"
+      >
+        <span className="remi-chat-fab-icon">R</span>
+      </button>
     </div>
     </NavigationProvider>
   );
