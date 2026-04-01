@@ -71,7 +71,7 @@ function App() {
             className={page.type === 'build' ? 'active' : ''}
             onClick={() => navigate({ type: 'build' })}
           >
-            Build
+            Build a Case
           </button>
           <button
             className={page.type === 'import' || page.type === 'quick-tasting' ? 'active' : ''}

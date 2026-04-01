@@ -5152,7 +5152,7 @@ textarea:focus-visible {
 
 .cb5-box-area {
   position: relative;
-  padding-top: 10px;
+  padding-top: 16px;
   margin-bottom: var(--space-4);
 }
 
@@ -5160,7 +5160,7 @@ textarea:focus-visible {
 
 .cb5-flaps {
   position: absolute;
-  top: 0;
+  top: 4px;
   left: 2px;
   right: 2px;
   height: 10px;
