@@ -314,18 +314,25 @@ const CaseBuilder = forwardRef<CaseBuilderHandle>(function CaseBuilder(_props, r
   // Keep ref in sync for auto-suggest effect
   suggestThemesRef.current = suggestThemes;
 
-  // Auto-suggest themes when first wine is added to an empty box
+  // Auto-suggest themes: when first wine is added, or when switching to an unnamed case with wines
   useEffect(() => {
     const prev = lastSeenRef.current;
     const curr = { activeIdx, itemCount: activeBox.items.length };
     lastSeenRef.current = curr;
 
-    // Only fire when item count goes 0→1 on the same box, and no manual theme set
-    if (prev.activeIdx === curr.activeIdx && prev.itemCount === 0 && curr.itemCount === 1 && !activeBox.themeIsManual) {
+    // Skip if manually themed or already has suggestions or no wines
+    if (activeBox.themeIsManual || activeBox.items.length === 0) return;
+
+    // Trigger 1: item count goes 0→1 on the same box (just added first wine)
+    const firstWineAdded = prev.activeIdx === curr.activeIdx && prev.itemCount === 0 && curr.itemCount === 1;
+    // Trigger 2: switched to a case that has wines but no theme and no suggestions yet
+    const switchedToUnnamed = prev.activeIdx !== curr.activeIdx && !activeBox.theme && activeBox.themeOptions.length === 0;
+
+    if (firstWineAdded || switchedToUnnamed) {
       const timer = setTimeout(() => suggestThemesRef.current(), 500);
       return () => clearTimeout(timer);
     }
-  }, [activeIdx, activeBox.items.length, activeBox.themeIsManual]);
+  }, [activeIdx, activeBox.items.length, activeBox.themeIsManual, activeBox.theme, activeBox.themeOptions.length]);
 
   // Start a new case
   const startNewCase = useCallback(() => {
