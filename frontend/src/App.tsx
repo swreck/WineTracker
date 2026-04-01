@@ -5,6 +5,7 @@ import WineDetail from './pages/WineDetail';
 import Import from './pages/Import';
 import QuickTasting from './pages/QuickTasting';
 import NextCase from './pages/NextCase';
+import CaseBuilder from './components/CaseBuilder';
 import RemiChat from './components/RemiChat';
 import { NavigationProvider } from './context/NavigationContext';
 import './App.css';
@@ -14,6 +15,7 @@ type Page =
   | { type: 'wines'; filterWineIds?: number[] }
   | { type: 'wine'; id: number }
   | { type: 'import'; initialMode?: 'receipt' | 'label' | 'manual' }
+  | { type: 'build' }
   | { type: 'next-case' }
   | { type: 'quick-tasting' };
 
@@ -42,6 +44,7 @@ function App() {
       case 'import-label': navigate({ type: 'import', initialMode: 'label' }); break;
       case 'quick-tasting': navigate({ type: 'quick-tasting' }); break;
       case 'next-case': navigate({ type: 'next-case' }); break;
+      case 'build': navigate({ type: 'build' }); break;
       default: navigate({ type: 'home' });
     }
   }
@@ -65,10 +68,10 @@ function App() {
             Wines
           </button>
           <button
-            className={page.type === 'next-case' ? 'active' : ''}
-            onClick={() => navigate({ type: 'next-case' })}
+            className={page.type === 'build' ? 'active' : ''}
+            onClick={() => navigate({ type: 'build' })}
           >
-            Next Case
+            Build
           </button>
           <button
             className={page.type === 'import' || page.type === 'quick-tasting' ? 'active' : ''}
@@ -112,6 +115,9 @@ function App() {
               }
             }}
           />
+        )}
+        {page.type === 'build' && (
+          <CaseBuilder />
         )}
         {page.type === 'next-case' && (
           <NextCase

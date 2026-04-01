@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import type { Wine } from '../api/client';
-import CaseBuilder from '../components/CaseBuilder';
 
 interface Props {
   onSelectWine: (id: number) => void;
@@ -12,7 +11,6 @@ export default function NextCase({ onSelectWine }: Props) {
   const [loading, setLoading] = useState(true);
   const [minRating, setMinRating] = useState(7.0);
   const [colorFilter, setColorFilter] = useState('');
-  const [caseBuilderOpen, setCaseBuilderOpen] = useState(false);
 
   // Themes
   const [themes, setThemes] = useState<{ theme: string; wines: string[]; description: string }[]>([]);
@@ -72,28 +70,11 @@ export default function NextCase({ onSelectWine }: Props) {
     return note.length <= max ? note : note.slice(0, max).replace(/\s+\S*$/, '') + '...';
   }
 
-  // ── CASE BUILDER MODE ──
-  if (caseBuilderOpen) {
-    return (
-      <div className="cb5-fullpage">
-        <div className="cb5-topbar">
-          <button className="cb5-back" onClick={() => setCaseBuilderOpen(false)}>&#8249; Back</button>
-          <h2 className="page-title">Build a Case</h2>
-          <div style={{ width: 60 }} />
-        </div>
-        <div className="cb5-scroll">
-          <CaseBuilder onBack={() => setCaseBuilderOpen(false)} />
-        </div>
-      </div>
-    );
-  }
-
-  // ── NORMAL NEXT CASE PAGE ──
+  // ── NEXT CASE PAGE ──
   return (
     <div className="next-case">
       <div className="nc-title-row">
         <h2 className="page-title">Next Case</h2>
-        <button className="cb-toggle-btn" onClick={() => setCaseBuilderOpen(true)}>Build a Case</button>
       </div>
 
       <section className="nc-section">
