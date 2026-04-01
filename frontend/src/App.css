@@ -5091,11 +5091,11 @@ textarea:focus-visible {
   flex-shrink: 0;
 }
 
-/* Mini crate icon in shelf */
+/* Mini crate icon in shelf — flaps hinge from outer edges */
 .cb5-mini-crate {
   position: relative;
   width: 24px;
-  height: 20px;
+  height: 18px;
   flex-shrink: 0;
 }
 
@@ -5105,48 +5105,46 @@ textarea:focus-visible {
   left: 0;
   right: 0;
   height: 14px;
-  background: #d4b896;
+  background: #e0ccaa;
   border: 1.5px solid #a07850;
   border-radius: 0 0 2px 2px;
 }
 
 @media (prefers-color-scheme: dark) {
   .cb5-mini-body {
-    background: #7a6245;
+    background: #8a7255;
     border-color: #9a7a50;
   }
 }
 
 .cb5-mini-flap {
   position: absolute;
-  top: 2px;
+  top: 4px;
   width: 50%;
-  height: 6px;
-  background: #dcc5a0;
-  border: 1px solid #a07850;
+  height: 4px;
+  background: #e0ccaa;
   border-bottom: none;
   transition: transform 0.4s ease;
 }
 
 @media (prefers-color-scheme: dark) {
   .cb5-mini-flap {
-    background: #8a7250;
-    border-color: #9a7a50;
+    background: #8a7255;
   }
 }
 
 .cb5-mini-flap-l {
   left: 0;
-  transform-origin: right bottom;
+  transform-origin: left bottom;
 }
 
 .cb5-mini-flap-r {
   right: 0;
-  transform-origin: left bottom;
+  transform-origin: right bottom;
 }
 
-.cb5-mini-open .cb5-mini-flap-l { transform: rotate(25deg); }
-.cb5-mini-open .cb5-mini-flap-r { transform: rotate(-25deg); }
+.cb5-mini-open .cb5-mini-flap-l { transform: rotate(-20deg); }
+.cb5-mini-open .cb5-mini-flap-r { transform: rotate(20deg); }
 .cb5-mini-closed .cb5-mini-flap-l,
 .cb5-mini-closed .cb5-mini-flap-r { transform: rotate(0deg); }
 
@@ -5154,65 +5152,50 @@ textarea:focus-visible {
 
 .cb5-box-area {
   position: relative;
+  padding-top: 10px;
   margin-bottom: var(--space-4);
 }
 
-/* ── Cardboard flaps (clip-path V-shape, seamless with box) ── */
+/* ── Cardboard flaps — thin paper, hinged from outer box edges ── */
 
 .cb5-flaps {
+  position: absolute;
+  top: 0;
+  left: 2px;
+  right: 2px;
+  height: 10px;
   display: flex;
-  height: 30px;
+  z-index: 1;
 }
 
 .cb5-flap {
   flex: 1;
   height: 100%;
-  background: #d4b896;
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      transparent, transparent 5px,
-      rgba(0,0,0,0.02) 5px, rgba(0,0,0,0.02) 6px
-    );
-  transition: clip-path 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  background: #e0ccaa;
+  transition: transform 0.4s ease;
 }
 
-/* Subtle crease between the two flaps */
 .cb5-flap-l {
-  border-right: 1px solid rgba(0,0,0,0.08);
-  border-left: 2px solid #a07850;
+  transform-origin: left bottom;
+  border-right: 1px solid rgba(0,0,0,0.06);
 }
 .cb5-flap-r {
-  border-left: 1px solid rgba(0,0,0,0.08);
-  border-right: 2px solid #a07850;
+  transform-origin: right bottom;
+  border-left: 1px solid rgba(0,0,0,0.06);
 }
 
-/* Open: inner edges angle down, creating V-shaped opening */
-.cb5-flaps-open .cb5-flap-l {
-  clip-path: polygon(0% 0%, 100% 55%, 100% 100%, 0% 100%);
-}
-.cb5-flaps-open .cb5-flap-r {
-  clip-path: polygon(0% 55%, 100% 0%, 100% 100%, 0% 100%);
-}
+/* Open: inner edges angle up like wings from outer edges */
+.cb5-flaps-open .cb5-flap-l { transform: rotate(-8deg); }
+.cb5-flaps-open .cb5-flap-r { transform: rotate(8deg); }
 
-/* Closed: flat lid */
+/* Closed: flaps drop flat */
 .cb5-flaps-closed .cb5-flap-l,
-.cb5-flaps-closed .cb5-flap-r {
-  clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
-}
+.cb5-flaps-closed .cb5-flap-r { transform: rotate(0deg); }
 
 @media (prefers-color-scheme: dark) {
   .cb5-flap {
-    background: #7a6245;
-    background-image:
-      repeating-linear-gradient(
-        0deg,
-        transparent, transparent 5px,
-        rgba(0,0,0,0.06) 5px, rgba(0,0,0,0.06) 6px
-      );
+    background: #8a7255;
   }
-  .cb5-flap-l { border-left-color: #9a7a50; border-right-color: rgba(255,255,255,0.06); }
-  .cb5-flap-r { border-right-color: #9a7a50; border-left-color: rgba(255,255,255,0.06); }
 }
 
 .cb5-box-footer-actions {
@@ -5225,35 +5208,35 @@ textarea:focus-visible {
 
 .cb5-box {
   position: relative;
-  background: #d4b896;
+  background: #e0ccaa;
   background-image:
     repeating-linear-gradient(
       0deg,
-      transparent, transparent 5px,
-      rgba(0,0,0,0.02) 5px, rgba(0,0,0,0.02) 6px
+      transparent, transparent 6px,
+      rgba(0,0,0,0.015) 6px, rgba(0,0,0,0.015) 7px
     );
-  border: 2px solid #a07850;
+  border: 2px solid #b89060;
   border-top: none;
   border-bottom-width: 4px;
   border-radius: 0 0 6px 6px;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
   margin-bottom: var(--space-4);
   overflow: hidden;
 }
 
 @media (prefers-color-scheme: dark) {
   .cb5-box {
-    background: #7a6245;
+    background: #8a7255;
     background-image:
       repeating-linear-gradient(
         0deg,
-        transparent, transparent 5px,
-        rgba(0,0,0,0.06) 5px, rgba(0,0,0,0.06) 6px
+        transparent, transparent 6px,
+        rgba(0,0,0,0.04) 6px, rgba(0,0,0,0.04) 7px
       );
-    border-color: #9a7a50;
+    border-color: #a08060;
     box-shadow:
       0 3px 8px rgba(0,0,0,0.3),
-      inset 0 1px 0 rgba(255,255,255,0.08);
+      inset 0 1px 0 rgba(255,255,255,0.06);
   }
 }
 
