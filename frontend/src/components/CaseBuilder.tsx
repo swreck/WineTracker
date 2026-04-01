@@ -307,6 +307,12 @@ const CaseBuilder = forwardRef<CaseBuilderHandle, Props>(function CaseBuilder(pr
             </span>
           </div>
 
+          {/* Progress bar */}
+          <div className="cb-fill-progress-track">
+            <div className={`cb-fill-progress-bar ${isFull ? 'cb-fill-progress-full' : ''}`}
+              style={{ width: `${(total / 12) * 100}%` }} />
+          </div>
+
           {box.themeOptions.length > 0 && (
             <div className="cb-fill-theme-chips">
               {box.themeOptions.map((opt, i) => (
@@ -366,6 +372,15 @@ const CaseBuilder = forwardRef<CaseBuilderHandle, Props>(function CaseBuilder(pr
                 </select>
               </div>
             </div>
+            <div className="cb-fill-fav-sorts">
+              {(['rating', 'price', 'name'] as const).map(field => (
+                <button key={field} className={`nc-sort-chip ${sortField === field ? 'nc-sort-chip-active' : ''}`}
+                  onClick={() => onToggleSort(field)}>
+                  {field === 'name' ? 'A-Z' : field.charAt(0).toUpperCase() + field.slice(1)}
+                  {sortField === field && <span className="nc-sort-arrow">{sortDir === 'desc' ? ' \u2193' : ' \u2191'}</span>}
+                </button>
+              ))}
+            </div>
             {favoritesLoading ? (
               <p className="nc-loading">Loading...</p>
             ) : (
@@ -423,13 +438,28 @@ const CaseBuilder = forwardRef<CaseBuilderHandle, Props>(function CaseBuilder(pr
         </div>
       )}
 
+      {/* Quick-start: when only 1 empty case, prompt for how many */}
+      {boxes.length === 1 && boxes[0].items.length === 0 && !boxes[0].theme && (
+        <div className="cb-quickstart">
+          <p className="cb-quickstart-prompt">How many cases are you planning?</p>
+          <div className="cb-quickstart-btns">
+            {[2, 3, 4].map(n => (
+              <button key={n} className="cb-quickstart-btn" onClick={() => {
+                setBoxes(prev => [...prev, ...Array(n - 1).fill(null).map(() => createEmptyBox())]);
+              }}>{n} cases</button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Case cards */}
       {boxes.map((box, idx) => {
         const total = getBoxTotal(box);
         const price = getBoxPrice(box);
         const isFull = total >= 12;
         return (
-          <div key={box.id} className={`cb-case-card ${isFull ? 'cb-case-card-full' : ''}`}>
+          <div key={box.id} className={`cb-case-card ${isFull ? 'cb-case-card-full' : ''} ${total === 0 ? 'cb-case-card-empty-tap' : ''}`}
+            onClick={total === 0 ? () => setFillingIndex(idx) : undefined}>
             <div className="cb-case-card-header">
               <input
                 type="text"
@@ -468,7 +498,7 @@ const CaseBuilder = forwardRef<CaseBuilderHandle, Props>(function CaseBuilder(pr
                     <span className="cb-case-card-dot" style={{ backgroundColor: WINE_DOT_COLORS[item.wineColor] || WINE_DOT_COLORS.red }} />
                     <span className="cb-case-card-wine-name">{item.wineName}</span>
                     {item.quantity > 1 && <span className="cb-case-card-qty">x{item.quantity}</span>}
-                    {item.isLikeThis && <span className="cb-case-card-similar">~</span>}
+                    {item.isLikeThis && <span className="cb-case-card-similar">similar</span>}
                   </div>
                 ))
               )}

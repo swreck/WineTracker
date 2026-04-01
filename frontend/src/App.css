@@ -5207,7 +5207,46 @@ textarea:focus-visible {
 
 .cb-case-card-similar {
   color: var(--color-text-tertiary);
-  font-size: 11px;
+  font-size: 10px;
+  font-style: italic;
+}
+
+/* Empty case card — fully tappable */
+.cb-case-card-empty-tap {
+  cursor: pointer;
+}
+
+.cb-case-card-empty-tap:active {
+  transform: scale(0.99);
+  transition: transform 0.1s;
+}
+
+/* Quick-start prompt */
+.cb-quickstart {
+  text-align: center;
+  padding: var(--space-2) 0 var(--space-4);
+}
+
+.cb-quickstart-prompt {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-3);
+}
+
+.cb-quickstart-btns {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+.cb-quickstart-btn {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-separator-opaque);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  min-height: 40px;
 }
 
 /* Case card footer */
@@ -5372,6 +5411,24 @@ textarea:focus-visible {
   color: rgba(46, 122, 58, 0.8);
 }
 
+/* Progress bar */
+.cb-fill-progress-track {
+  height: 4px;
+  background: rgba(160, 132, 92, 0.12);
+}
+
+.cb-fill-progress-bar {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 0 2px 2px 0;
+  transition: width 0.3s ease;
+}
+
+.cb-fill-progress-full {
+  background: rgba(46, 122, 58, 0.7);
+  border-radius: 0;
+}
+
 .cb-fill-theme-chips {
   display: flex;
   flex-wrap: wrap;
@@ -5531,9 +5588,15 @@ textarea:focus-visible {
   min-height: 28px;
 }
 
+.cb-fill-fav-sorts {
+  display: flex;
+  gap: 4px;
+  margin-bottom: var(--space-3);
+}
+
 .cb-fill-fav-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: var(--space-2);
 }
 
@@ -5543,7 +5606,7 @@ textarea:focus-visible {
   border: 1px solid var(--color-separator);
   text-align: left;
   cursor: pointer;
-  min-height: 60px;
+  width: 100%;
 }
 
 .cb-fill-fav-card:active {
@@ -5742,7 +5805,8 @@ textarea:focus-visible {
 /* Tablet */
 @media (min-width: 768px) {
   .cb-fill-fav-list {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   }
 
   .cb-email-modal {
