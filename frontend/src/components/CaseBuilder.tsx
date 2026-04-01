@@ -446,7 +446,7 @@ const CaseBuilder = forwardRef<CaseBuilderHandle>(function CaseBuilder(_props, r
           {/* Wines in the box */}
           <div className="cb5-box-contents">
             {activeBox.items.length === 0 ? (
-              <p className="cb5-box-empty">Your case starts here</p>
+              <p className="cb5-box-empty">Tap a wine below to peek, or tap + to add</p>
             ) : (
               activeBox.items.map((item, idx) => (
                 <div key={idx} className="cb5-box-wine">
