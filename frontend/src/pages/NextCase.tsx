@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import type { Wine } from '../api/client';
 import CaseBuilder from '../components/CaseBuilder';
-import type { CaseBuilderHandle } from '../components/CaseBuilder';
 
 interface Props {
   onSelectWine: (id: number) => void;
@@ -13,61 +12,31 @@ export default function NextCase({ onSelectWine }: Props) {
   const [loading, setLoading] = useState(true);
   const [minRating, setMinRating] = useState(7.0);
   const [colorFilter, setColorFilter] = useState('');
-  const [sortField, setSortField] = useState<'name' | 'vintage' | 'rating' | 'price'>('rating');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [caseBuilderOpen, setCaseBuilderOpen] = useState(false);
-  const caseBuilderRef = useRef<CaseBuilderHandle>(null);
-  const [wineIdsInCases, setWineIdsInCases] = useState<Set<number>>(new Set());
-
-  useEffect(() => { loadFavorites(); }, [minRating, colorFilter]);
-
-  async function loadFavorites() {
-    try {
-      setLoading(true);
-      const data = await api.getFavorites({ minRating, color: colorFilter || undefined });
-      setWines(data);
-    } catch { /* silent */ } finally { setLoading(false); }
-  }
-
-  function sortWines(wines: Wine[]): Wine[] {
-    const sorted = [...wines];
-    sorted.sort((a, b) => {
-      let cmp = 0;
-      switch (sortField) {
-        case 'name': cmp = a.name.localeCompare(b.name); break;
-        case 'vintage': {
-          const aY = a.vintages?.map(v => v.vintageYear).sort((x, y) => y - x)[0] || 0;
-          const bY = b.vintages?.map(v => v.vintageYear).sort((x, y) => y - x)[0] || 0;
-          cmp = aY - bY; break;
-        }
-        case 'rating': cmp = (a.averageRating || 0) - (b.averageRating || 0); break;
-        case 'price': cmp = (getLatestPrice(a) || 0) - (getLatestPrice(b) || 0); break;
-      }
-      return sortDir === 'desc' ? -cmp : cmp;
-    });
-    return sorted;
-  }
-
-  function toggleSort(field: string) {
-    const f = field as typeof sortField;
-    if (sortField === f) setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
-    else { setSortField(f); setSortDir(f === 'name' ? 'asc' : 'desc'); }
-  }
 
   // Themes
   const [themes, setThemes] = useState<{ theme: string; wines: string[]; description: string }[]>([]);
   const [themesLoading, setThemesLoading] = useState(false);
-  async function handleFindThemes() {
-    try { setThemesLoading(true); const data = await api.remiFindThemes(minRating); setThemes(data.themes || []); }
-    catch { /* silent */ } finally { setThemesLoading(false); }
-  }
 
   // Want to Try
   const [wantToTry, setWantToTry] = useState<{ id: number; name: string; note?: string | null }[]>([]);
   const [showWantToTry, setShowWantToTry] = useState(false);
   const [newWantName, setNewWantName] = useState('');
   const [newWantNote, setNewWantNote] = useState('');
-  useEffect(() => { api.remiGetWantToTry().then(data => setWantToTry(data.items || [])).catch(() => {}); }, []);
+
+  useEffect(() => { loadFavorites(); }, [minRating, colorFilter]);
+  useEffect(() => { api.remiGetWantToTry().then(d => setWantToTry(d.items || [])).catch(() => {}); }, []);
+
+  async function loadFavorites() {
+    try { setLoading(true); setWines(await api.getFavorites({ minRating, color: colorFilter || undefined })); }
+    catch { /* silent */ } finally { setLoading(false); }
+  }
+
+  async function handleFindThemes() {
+    try { setThemesLoading(true); setThemes((await api.remiFindThemes(minRating)).themes || []); }
+    catch { /* silent */ } finally { setThemesLoading(false); }
+  }
+
   async function addWantToTry() {
     if (!newWantName.trim()) return;
     try {
@@ -76,20 +45,21 @@ export default function NextCase({ onSelectWine }: Props) {
       setNewWantName(''); setNewWantNote('');
     } catch { /* silent */ }
   }
+
   async function removeWantToTry(id: number) {
-    try { await api.remiDeleteWantToTry(id); setWantToTry(prev => prev.filter(item => item.id !== id)); } catch { /* silent */ }
+    try { await api.remiDeleteWantToTry(id); setWantToTry(prev => prev.filter(i => i.id !== id)); } catch { /* silent */ }
   }
 
   function getLatestPrice(wine: Wine): number | null {
     if (!wine.vintages) return null;
-    for (const v of wine.vintages) if (v.purchaseItems) for (const item of v.purchaseItems) if (item.pricePaid) return Number(item.pricePaid);
+    for (const v of wine.vintages) if (v.purchaseItems) for (const p of v.purchaseItems) if (p.pricePaid) return Number(p.pricePaid);
     return null;
   }
 
   function getLatestNote(wine: Wine): string | undefined {
     if (!wine.vintages) return undefined;
     for (const v of wine.vintages) {
-      if (v.tastingEvents && v.tastingEvents.length > 0) {
+      if (v.tastingEvents?.length) {
         const sorted = [...v.tastingEvents].sort((a, b) => new Date(b.tastingDate || 0).getTime() - new Date(a.tastingDate || 0).getTime());
         if (sorted[0]?.notes) return sorted[0].notes;
       }
@@ -97,55 +67,28 @@ export default function NextCase({ onSelectWine }: Props) {
     return undefined;
   }
 
-  function truncateNote(note: string | undefined, maxLen = 60): string {
+  function truncateNote(note: string | undefined, max = 60): string {
     if (!note) return '';
-    return note.length <= maxLen ? note : note.slice(0, maxLen).replace(/\s+\S*$/, '') + '...';
+    return note.length <= max ? note : note.slice(0, max).replace(/\s+\S*$/, '') + '...';
   }
 
-  const priceLookup = useMemo(() => {
-    const map = new Map<number, number>();
-    for (const wine of wines) { const p = getLatestPrice(wine); if (p) map.set(wine.id, p); }
-    return map;
-  }, [wines]);
-
-  const sortedWines = sortWines(wines);
-
-  // ============================================================
-  // CASE BUILDER MODE
-  // ============================================================
+  // ── CASE BUILDER MODE ──
   if (caseBuilderOpen) {
     return (
-      <div className="cb-fullpage">
-        <div className="cb-topbar">
-          <button className="cb-back-btn" onClick={() => setCaseBuilderOpen(false)}>&#8249; Back</button>
+      <div className="cb5-fullpage">
+        <div className="cb5-topbar">
+          <button className="cb5-back" onClick={() => setCaseBuilderOpen(false)}>&#8249; Back</button>
           <h2 className="page-title">Build a Case</h2>
           <div style={{ width: 60 }} />
         </div>
-        <div className="cb-content">
-          <CaseBuilder
-            ref={caseBuilderRef}
-            onClose={() => setCaseBuilderOpen(false)}
-            onWineIdsChange={setWineIdsInCases}
-            priceLookup={priceLookup}
-            favorites={sortedWines}
-            favoritesLoading={loading}
-            minRating={minRating}
-            onMinRatingChange={setMinRating}
-            colorFilter={colorFilter}
-            onColorFilterChange={setColorFilter}
-            sortField={sortField}
-            onToggleSort={toggleSort}
-            sortDir={sortDir}
-            getLatestPrice={getLatestPrice}
-          />
+        <div className="cb5-scroll">
+          <CaseBuilder onBack={() => setCaseBuilderOpen(false)} />
         </div>
       </div>
     );
   }
 
-  // ============================================================
-  // NORMAL NEXT CASE PAGE
-  // ============================================================
+  // ── NORMAL NEXT CASE PAGE ──
   return (
     <div className="next-case">
       <div className="nc-title-row">
@@ -157,35 +100,26 @@ export default function NextCase({ onSelectWine }: Props) {
         <h3 className="nc-section-title">Your Favorites</h3>
         <div className="nc-filters">
           <label className="nc-rating-filter">
-            Min: <select value={minRating} onChange={(e) => setMinRating(parseFloat(e.target.value))}>
+            Min: <select value={minRating} onChange={e => setMinRating(parseFloat(e.target.value))}>
               {[6, 6.5, 7, 7.5, 8, 8.5, 9].map(r => <option key={r} value={r}>{r}+</option>)}
             </select>
           </label>
-          <select value={colorFilter} onChange={(e) => setColorFilter(e.target.value)} className="nc-color-filter">
+          <select value={colorFilter} onChange={e => setColorFilter(e.target.value)} className="nc-color-filter">
             <option value="">All Colors</option>
             <option value="red">Red</option><option value="white">White</option>
-            <option value="rose">Ros&eacute;</option><option value="sparkling">Sparkling</option>
+            <option value="rose">Rosé</option><option value="sparkling">Sparkling</option>
           </select>
         </div>
-        <div className="nc-sort-row">
-          {(['rating', 'vintage', 'price', 'name'] as const).map(field => (
-            <button key={field} className={`nc-sort-chip ${sortField === field ? 'nc-sort-chip-active' : ''}`} onClick={() => toggleSort(field)}>
-              {field === 'name' ? 'A-Z' : field.charAt(0).toUpperCase() + field.slice(1)}
-              {sortField === field && <span className="nc-sort-arrow">{sortDir === 'desc' ? ' \u2193' : ' \u2191'}</span>}
-            </button>
-          ))}
-        </div>
 
-        {loading ? <p className="nc-loading">Loading favorites...</p> : sortedWines.length === 0 ? <p className="nc-empty">No wines at this rating threshold.</p> : (
+        {loading ? <p className="nc-loading">Loading favorites...</p> : wines.length === 0 ? <p className="nc-empty">No wines at this rating threshold.</p> : (
           <div className="wine-cards">
-            {sortedWines.map(wine => {
-              const price = getLatestPrice(wine);
-              const note = getLatestNote(wine);
+            {wines.map(wine => {
+              const price = getLatestPrice(wine); const note = getLatestNote(wine);
               return (
                 <div key={wine.id} className={`wine-card card-tint-${wine.color}`} onClick={() => onSelectWine(wine.id)}>
                   <div className="wine-card-header"><span className="wine-name-serif">{wine.name}</span></div>
                   <div className="wine-card-meta">
-                    {wine.vintages && wine.vintages.length > 0 && <span className="wine-card-vintage">{wine.vintages.map(v => v.vintageYear).sort((a, b) => b - a).slice(0, 2).join(', ')}</span>}
+                    {wine.vintages?.length ? <span className="wine-card-vintage">{wine.vintages.map(v => v.vintageYear).sort((a, b) => b - a).slice(0, 2).join(', ')}</span> : null}
                     {wine.averageRating && <span className="wine-card-rating">{wine.averageRating.toFixed(1)}</span>}
                     {price && <span className="wine-card-price">${price}</span>}
                   </div>
@@ -202,11 +136,11 @@ export default function NextCase({ onSelectWine }: Props) {
               {themesLoading ? 'Remi is analyzing...' : 'Find Case Themes'}
             </button>
             {themes.length > 0 && (
-              <div className="nc-themes">{themes.map((theme, i) => (
+              <div className="nc-themes">{themes.map((t, i) => (
                 <div key={i} className="nc-theme-card">
-                  <h4 className="nc-theme-name">{theme.theme}</h4>
-                  <p className="nc-theme-desc">{theme.description}</p>
-                  <div className="nc-theme-wines">{theme.wines.map((w, j) => <span key={j} className="nc-theme-wine">{w}</span>)}</div>
+                  <h4 className="nc-theme-name">{t.theme}</h4>
+                  <p className="nc-theme-desc">{t.description}</p>
+                  <div className="nc-theme-wines">{t.wines.map((w, j) => <span key={j} className="nc-theme-wine">{w}</span>)}</div>
                 </div>
               ))}</div>
             )}
@@ -228,8 +162,8 @@ export default function NextCase({ onSelectWine }: Props) {
               </div>
             ))}
             <div className="nc-want-add">
-              <input type="text" value={newWantName} onChange={(e) => setNewWantName(e.target.value)} placeholder="Wine name" className="nc-want-input" />
-              <input type="text" value={newWantNote} onChange={(e) => setNewWantNote(e.target.value)} placeholder="Why? (optional)" className="nc-want-input nc-want-note-input" />
+              <input type="text" value={newWantName} onChange={e => setNewWantName(e.target.value)} placeholder="Wine name" className="nc-want-input" />
+              <input type="text" value={newWantNote} onChange={e => setNewWantNote(e.target.value)} placeholder="Why? (optional)" className="nc-want-input nc-want-note-input" />
               <button className="nc-want-add-btn" onClick={addWantToTry} disabled={!newWantName.trim()}>Add</button>
             </div>
           </div>

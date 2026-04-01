@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef } from 'react';
 import { api } from '../api/client';
 import type { Wine } from '../api/client';
+
+// ── Types ──────────────────────────────────────────────
 
 export interface CaseBoxItem {
   wineId: number;
@@ -15,102 +17,187 @@ export interface CaseBoxItem {
 export interface CaseBox {
   id: string;
   theme: string;
+  themeIsManual: boolean; // true if user typed it, false if Remi guessed
   themeOptions: string[];
   items: CaseBoxItem[];
 }
-
-interface Props {
-  onClose: () => void;
-  onWineIdsChange: (ids: Set<number>) => void;
-  priceLookup: Map<number, number>;
-  favorites: Wine[];
-  favoritesLoading: boolean;
-  minRating: number;
-  onMinRatingChange: (r: number) => void;
-  colorFilter: string;
-  onColorFilterChange: (c: string) => void;
-  sortField: string;
-  onToggleSort: (field: string) => void;
-  sortDir: string;
-  getLatestPrice: (wine: Wine) => number | null;
-}
-
-const STORAGE_KEY = 'winetracker-case-builder';
-
-function generateId() {
-  return Math.random().toString(36).slice(2, 9);
-}
-
-function createEmptyBox(): CaseBox {
-  return { id: generateId(), theme: '', themeOptions: [], items: [] };
-}
-
-function getBoxTotal(box: CaseBox): number {
-  return box.items.reduce((sum, item) => sum + item.quantity, 0);
-}
-
-function loadState(): { boxes: CaseBox[] } | null {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch { /* ignore */ }
-  return null;
-}
-
-function saveState(boxes: CaseBox[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ boxes }));
-}
-
-const WINE_DOT_COLORS: Record<string, string> = {
-  red: '#5a1a2a',
-  white: '#c4a84a',
-  rose: '#c4607a',
-  sparkling: '#8a9ab5',
-};
 
 export interface CaseBuilderHandle {
   addWine: (wine: Wine) => void;
 }
 
-const CaseBuilder = forwardRef<CaseBuilderHandle, Props>(function CaseBuilder(props, ref) {
-  const {
-    onClose, onWineIdsChange, priceLookup, favorites, favoritesLoading,
-    minRating, onMinRatingChange, colorFilter, onColorFilterChange,
-    sortField, onToggleSort, sortDir, getLatestPrice,
-  } = props;
+interface Props {
+  onBack: () => void;
+}
 
-  const saved = useRef(loadState());
-  const [boxes, setBoxes] = useState<CaseBox[]>(saved.current?.boxes?.length ? saved.current.boxes : [createEmptyBox()]);
-  const [fillingIndex, setFillingIndex] = useState<number | null>(null); // null = overview
-  const [showEmailDraft, setShowEmailDraft] = useState(false);
+// ── Helpers ────────────────────────────────────────────
+
+const STORAGE_KEY = 'winetracker-casebuilder-v5';
+
+function genId() { return Math.random().toString(36).slice(2, 9); }
+
+function emptyBox(): CaseBox {
+  return { id: genId(), theme: '', themeIsManual: false, themeOptions: [], items: [] };
+}
+
+function boxTotal(box: CaseBox): number {
+  return box.items.reduce((s, i) => s + i.quantity, 0);
+}
+
+function loadBoxes(): CaseBox[] {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) { const d = JSON.parse(s); if (d.boxes?.length) return d.boxes; }
+  } catch { /* ignore */ }
+  return [emptyBox()];
+}
+
+function saveBoxes(boxes: CaseBox[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ boxes }));
+}
+
+function getWinePrice(wine: Wine): number | null {
+  if (!wine.vintages) return null;
+  for (const v of wine.vintages)
+    if (v.purchaseItems) for (const p of v.purchaseItems) if (p.pricePaid) return Number(p.pricePaid);
+  return null;
+}
+
+function getWineRating(wine: Wine): number | null {
+  return wine.averageRating ?? null;
+}
+
+function getWineRegion(wine: Wine): string {
+  return wine.region || 'Unknown';
+}
+
+function getWineLatestNote(wine: Wine): string | null {
+  if (!wine.vintages) return null;
+  for (const v of wine.vintages) {
+    if (v.tastingEvents?.length) {
+      const sorted = [...v.tastingEvents].sort((a, b) =>
+        new Date(b.tastingDate || 0).getTime() - new Date(a.tastingDate || 0).getTime());
+      if (sorted[0]?.notes) return sorted[0].notes;
+    }
+  }
+  return null;
+}
+
+function getWineSellerNotes(wine: Wine): string | null {
+  if (!wine.vintages) return null;
+  for (const v of wine.vintages) if (v.sellerNotes) return v.sellerNotes;
+  return null;
+}
+
+const DOT_COLORS: Record<string, string> = {
+  red: '#5a1a2a', white: '#c4a84a', rose: '#c4607a', sparkling: '#8a9ab5',
+};
+
+// ── Component ──────────────────────────────────────────
+
+const CaseBuilder = forwardRef<CaseBuilderHandle, Props>(function CaseBuilder({ onBack }, ref) {
+  // Case state
+  const [boxes, setBoxes] = useState<CaseBox[]>(loadBoxes);
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  // Wine collection
+  const [allWines, setAllWines] = useState<Wine[]>([]);
+  const [winesLoading, setWinesLoading] = useState(true);
+
+  // Filters/sort
+  const [search, setSearch] = useState('');
+  const [colorFilter, setColorFilter] = useState('');
+  const [regionFilter, setRegionFilter] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('');
+  const [sortBy, setSortBy] = useState<'rating' | 'price' | 'name' | 'region'>('rating');
+  const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
+
+  // UI state
+  const [peekWine, setPeekWine] = useState<Wine | null>(null);
+  const [themePopupOpen, setThemePopupOpen] = useState(false);
+  const [themeInput, setThemeInput] = useState('');
+  const [themeSuggesting, setThemeSuggesting] = useState(false);
+  const [undoItem, setUndoItem] = useState<{ boxIdx: number; item: CaseBoxItem; pos: number } | null>(null);
+  const [addedFlash, setAddedFlash] = useState<number | null>(null);
   const [emailDraft, setEmailDraft] = useState('');
+  const [showEmail, setShowEmail] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
   const [revisionInput, setRevisionInput] = useState('');
   const [copied, setCopied] = useState(false);
-  const [themeSuggestingFor, setThemeSuggestingFor] = useState<number | null>(null);
-  const [undoItem, setUndoItem] = useState<{ boxIdx: number; item: CaseBoxItem; position: number } | null>(null);
-  const [addedFlash, setAddedFlash] = useState<number | null>(null);
 
-  useEffect(() => { saveState(boxes); }, [boxes]);
+  // Persist
+  useEffect(() => { saveBoxes(boxes); }, [boxes]);
 
+  // Load all wines
   useEffect(() => {
-    const ids = new Set<number>();
-    for (const box of boxes) for (const item of box.items) ids.add(item.wineId);
-    onWineIdsChange(ids);
-  }, [boxes, onWineIdsChange]);
+    setWinesLoading(true);
+    api.getWines().then(w => { setAllWines(w); setWinesLoading(false); }).catch(() => setWinesLoading(false));
+  }, []);
 
-  // Add wine to the case currently being filled
-  const addWineToBox = useCallback((wine: Wine) => {
-    const targetIdx = fillingIndex ?? 0;
+  // Ensure activeIdx is valid
+  useEffect(() => {
+    if (activeIdx >= boxes.length) setActiveIdx(Math.max(0, boxes.length - 1));
+  }, [boxes.length, activeIdx]);
+
+  // ── Derived ────────────────────────────────────────
+
+  const activeBox = boxes[activeIdx] || emptyBox();
+  const activeTotal = boxTotal(activeBox);
+  const activeFull = activeTotal >= 12;
+  const sealedBoxes = boxes.filter((b, i) => i !== activeIdx && boxTotal(b) >= 12);
+  const hasAnyWines = boxes.some(b => b.items.length > 0);
+
+  // Unique regions for filter dropdown
+  const uniqueRegions = [...new Set(allWines.map(w => w.region).filter(Boolean))].sort() as string[];
+
+  // Filter + sort wines
+  const filteredWines = allWines.filter(w => {
+    if (colorFilter && w.color !== colorFilter) return false;
+    if (regionFilter && w.region !== regionFilter) return false;
+    if (sourceFilter) {
+      const hasSrc = w.vintages?.some(v => v.source === sourceFilter);
+      if (!hasSrc) return false;
+    }
+    if (search) {
+      const q = search.toLowerCase();
+      const nameMatch = w.name.toLowerCase().includes(q);
+      const regionMatch = w.region?.toLowerCase().includes(q);
+      const grapeMatch = w.grapeVarietyOrBlend?.toLowerCase().includes(q);
+      if (!nameMatch && !regionMatch && !grapeMatch) return false;
+    }
+    return true;
+  }).sort((a, b) => {
+    let cmp = 0;
+    switch (sortBy) {
+      case 'rating': cmp = (getWineRating(a) || 0) - (getWineRating(b) || 0); break;
+      case 'price': cmp = (getWinePrice(a) || 0) - (getWinePrice(b) || 0); break;
+      case 'name': cmp = a.name.localeCompare(b.name); break;
+      case 'region': cmp = getWineRegion(a).localeCompare(getWineRegion(b)); break;
+    }
+    return sortDir === 'desc' ? -cmp : cmp;
+  });
+
+  // Box price
+  function boxPrice(box: CaseBox): number {
+    return box.items.reduce((s, item) => {
+      const wine = allWines.find(w => w.id === item.wineId);
+      return s + (wine ? (getWinePrice(wine) || 0) * item.quantity : 0);
+    }, 0);
+  }
+
+  // ── Actions ────────────────────────────────────────
+
+  const addWine = useCallback((wine: Wine) => {
+    if (activeFull) return;
     setBoxes(prev => {
       const updated = [...prev];
-      const box = { ...updated[targetIdx] };
-      if (getBoxTotal(box) >= 12) return prev;
+      const box = { ...updated[activeIdx] };
+      if (boxTotal(box) >= 12) return prev;
       const bestVintage = wine.vintages?.sort((a, b) => b.vintageYear - a.vintageYear)[0];
-      const existingIdx = box.items.findIndex(item => item.wineId === wine.id);
-      if (existingIdx >= 0) {
+      const existIdx = box.items.findIndex(i => i.wineId === wine.id);
+      if (existIdx >= 0) {
         box.items = [...box.items];
-        box.items[existingIdx] = { ...box.items[existingIdx], quantity: box.items[existingIdx].quantity + 1 };
+        box.items[existIdx] = { ...box.items[existIdx], quantity: box.items[existIdx].quantity + 1 };
       } else {
         box.items = [...box.items, {
           wineId: wine.id, wineName: wine.name, wineColor: wine.color,
@@ -118,28 +205,28 @@ const CaseBuilder = forwardRef<CaseBuilderHandle, Props>(function CaseBuilder(pr
           quantity: 1, isLikeThis: false,
         }];
       }
-      updated[targetIdx] = box;
+      updated[activeIdx] = box;
       return updated;
     });
     setAddedFlash(wine.id);
     setTimeout(() => setAddedFlash(null), 400);
-  }, [fillingIndex]);
+  }, [activeIdx, activeFull]);
 
-  useImperativeHandle(ref, () => ({ addWine: addWineToBox }), [addWineToBox]);
+  useImperativeHandle(ref, () => ({ addWine }), [addWine]);
 
-  const removeItem = useCallback((boxIdx: number, itemIdx: number) => {
-    const item = boxes[boxIdx]?.items[itemIdx];
+  const removeItem = useCallback((itemIdx: number) => {
+    const item = activeBox.items[itemIdx];
     if (!item) return;
-    setUndoItem({ boxIdx, item, position: itemIdx });
+    setUndoItem({ boxIdx: activeIdx, item, pos: itemIdx });
     setTimeout(() => setUndoItem(null), 4000);
     setBoxes(prev => {
       const updated = [...prev];
-      const box = { ...updated[boxIdx] };
+      const box = { ...updated[activeIdx] };
       box.items = box.items.filter((_, i) => i !== itemIdx);
-      updated[boxIdx] = box;
+      updated[activeIdx] = box;
       return updated;
     });
-  }, [boxes]);
+  }, [activeIdx, activeBox]);
 
   const handleUndo = useCallback(() => {
     if (!undoItem) return;
@@ -147,425 +234,406 @@ const CaseBuilder = forwardRef<CaseBuilderHandle, Props>(function CaseBuilder(pr
       const updated = [...prev];
       const box = { ...updated[undoItem.boxIdx] };
       box.items = [...box.items];
-      box.items.splice(undoItem.position, 0, undoItem.item);
+      box.items.splice(undoItem.pos, 0, undoItem.item);
       updated[undoItem.boxIdx] = box;
       return updated;
     });
     setUndoItem(null);
   }, [undoItem]);
 
-  const updateQuantity = useCallback((boxIdx: number, itemIdx: number, delta: number) => {
+  const updateQty = useCallback((itemIdx: number, delta: number) => {
+    const item = activeBox.items[itemIdx];
+    if (!item) return;
+    if (item.quantity + delta < 1) { removeItem(itemIdx); return; }
+    if (activeTotal + delta > 12) return;
     setBoxes(prev => {
       const updated = [...prev];
-      const box = { ...updated[boxIdx] };
-      const item = { ...box.items[itemIdx] };
-      const newQty = item.quantity + delta;
-      if (newQty < 1) { removeItem(boxIdx, itemIdx); return prev; }
-      if (getBoxTotal(box) + delta > 12) return prev;
-      item.quantity = newQty;
+      const box = { ...updated[activeIdx] };
       box.items = [...box.items];
-      box.items[itemIdx] = item;
-      updated[boxIdx] = box;
+      box.items[itemIdx] = { ...box.items[itemIdx], quantity: box.items[itemIdx].quantity + delta };
+      updated[activeIdx] = box;
       return updated;
     });
-  }, [removeItem]);
+  }, [activeIdx, activeBox, activeTotal, removeItem]);
 
-  const toggleLikeThis = useCallback((boxIdx: number, itemIdx: number) => {
+  const toggleLike = useCallback((itemIdx: number) => {
     setBoxes(prev => {
       const updated = [...prev];
-      const box = { ...updated[boxIdx] };
+      const box = { ...updated[activeIdx] };
       box.items = [...box.items];
       box.items[itemIdx] = { ...box.items[itemIdx], isLikeThis: !box.items[itemIdx].isLikeThis };
-      updated[boxIdx] = box;
+      updated[activeIdx] = box;
       return updated;
     });
-  }, []);
+  }, [activeIdx]);
 
-  const setTheme = useCallback((boxIdx: number, theme: string) => {
+  // Theme
+  const setTheme = useCallback((theme: string, manual: boolean) => {
     setBoxes(prev => {
       const updated = [...prev];
-      updated[boxIdx] = { ...updated[boxIdx], theme };
+      updated[activeIdx] = { ...updated[activeIdx], theme, themeIsManual: manual };
       return updated;
     });
-  }, []);
+  }, [activeIdx]);
 
-  const suggestThemes = useCallback(async (boxIdx: number) => {
-    const box = boxes[boxIdx];
-    if (box.items.length === 0) return;
-    setThemeSuggestingFor(boxIdx);
+  const suggestThemes = useCallback(async () => {
+    if (activeBox.items.length === 0) return;
+    setThemeSuggesting(true);
     try {
-      const wines = box.items.map(item => ({
-        name: item.wineName, color: item.wineColor,
-        region: item.wineRegion, vintageYear: item.vintageYear,
+      const wines = activeBox.items.map(i => ({
+        name: i.wineName, color: i.wineColor, region: i.wineRegion, vintageYear: i.vintageYear,
       }));
       const data = await api.remiCaseSuggestTheme(wines);
       setBoxes(prev => {
         const updated = [...prev];
-        updated[boxIdx] = {
-          ...updated[boxIdx],
+        updated[activeIdx] = {
+          ...updated[activeIdx],
           themeOptions: data.themes || [],
-          theme: updated[boxIdx].theme || (data.themes?.[0] || ''),
+          theme: updated[activeIdx].themeIsManual ? updated[activeIdx].theme : (data.themes?.[0] || updated[activeIdx].theme),
         };
         return updated;
       });
     } catch { /* silent */ }
-    setThemeSuggestingFor(null);
-  }, [boxes]);
+    setThemeSuggesting(false);
+  }, [activeIdx, activeBox]);
 
-  const addCase = useCallback(() => {
-    setBoxes(prev => [...prev, createEmptyBox()]);
+  // Seal current box, open new one
+  const sealAndNext = useCallback(() => {
+    setBoxes(prev => [...prev, emptyBox()]);
+    setActiveIdx(boxes.length); // new box is at end
+  }, [boxes.length]);
+
+  // Reopen a sealed box
+  const reopenBox = useCallback((idx: number) => {
+    setActiveIdx(idx);
   }, []);
 
-  const removeCase = useCallback((idx: number) => {
+  // Remove a box
+  const removeBox = useCallback((idx: number) => {
     const box = boxes[idx];
-    if (box && box.items.length > 0 && !window.confirm(`Remove Case ${idx + 1} and its ${getBoxTotal(box)} bottles?`)) return;
+    if (box?.items.length > 0 && !window.confirm(`Remove this case and its ${boxTotal(box)} bottles?`)) return;
     setUndoItem(null);
     if (boxes.length <= 1) {
-      setBoxes([createEmptyBox()]);
-      setFillingIndex(null);
-      localStorage.removeItem(STORAGE_KEY);
+      setBoxes([emptyBox()]);
+      setActiveIdx(0);
       return;
     }
     setBoxes(prev => prev.filter((_, i) => i !== idx));
-    if (fillingIndex === idx) setFillingIndex(null);
-    else if (fillingIndex !== null && fillingIndex > idx) setFillingIndex(fillingIndex - 1);
-  }, [boxes, fillingIndex]);
+    if (activeIdx === idx) setActiveIdx(0);
+    else if (activeIdx > idx) setActiveIdx(activeIdx - 1);
+  }, [boxes, activeIdx]);
 
-  const handleClear = useCallback(() => {
-    const totalBottles = boxes.reduce((sum, b) => sum + getBoxTotal(b), 0);
-    if (totalBottles > 0 && !window.confirm('Clear all cases and start over?')) return;
-    setBoxes([createEmptyBox()]);
-    setFillingIndex(null);
-    setShowEmailDraft(false);
-    setEmailDraft('');
-    setUndoItem(null);
-    localStorage.removeItem(STORAGE_KEY);
-  }, [boxes]);
-
-  const handleDraftEmail = useCallback(async (revision?: string) => {
+  // Email
+  const draftEmail = useCallback(async (revision?: string) => {
     setEmailLoading(true);
     try {
       const emailBoxes = boxes.filter(b => b.items.length > 0 || b.theme).map(b => ({
         theme: b.theme || 'Mixed case',
-        items: b.items.map(item => ({
-          name: item.wineName, vintageYear: item.vintageYear,
-          quantity: item.quantity, isLikeThis: item.isLikeThis,
-        })),
+        items: b.items.map(i => ({ name: i.wineName, vintageYear: i.vintageYear, quantity: i.quantity, isLikeThis: i.isLikeThis })),
       }));
       const data = await api.remiCaseEmail(emailBoxes, revision);
       setEmailDraft(data.email);
-      setShowEmailDraft(true);
+      setShowEmail(true);
       setRevisionInput('');
     } catch { /* silent */ }
     setEmailLoading(false);
   }, [boxes]);
 
-  const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(emailDraft);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 3000);
-    } catch { /* silent */ }
+  const copyEmail = useCallback(async () => {
+    try { await navigator.clipboard.writeText(emailDraft); setCopied(true); setTimeout(() => setCopied(false), 3000); }
+    catch { /* silent */ }
   }, [emailDraft]);
 
-  function getBoxPrice(box: CaseBox): number {
-    return box.items.reduce((sum, item) => sum + (priceLookup.get(item.wineId) || 0) * item.quantity, 0);
+  function toggleSort(field: typeof sortBy) {
+    if (sortBy === field) setSortDir(d => d === 'desc' ? 'asc' : 'desc');
+    else { setSortBy(field); setSortDir(field === 'name' || field === 'region' ? 'asc' : 'desc'); }
   }
 
-  const hasAnyWines = boxes.some(b => b.items.length > 0);
-  const totalBottles = boxes.reduce((sum, b) => sum + getBoxTotal(b), 0);
-  const totalPrice = boxes.reduce((sum, b) => sum + getBoxPrice(b), 0);
+  // ── Render ─────────────────────────────────────────
 
-  // ============================================================
-  // FILL MODE — filling a specific case
-  // ============================================================
-  if (fillingIndex !== null && boxes[fillingIndex]) {
-    const box = boxes[fillingIndex];
-    const total = getBoxTotal(box);
-    const price = getBoxPrice(box);
-    const isFull = total >= 12;
+  const price = boxPrice(activeBox);
 
-    return (
-      <div className="cb-fill-page">
-        {/* Header */}
-        <button className="cb-fill-back" onClick={() => setFillingIndex(null)}>
-          &#8249; All Cases
-        </button>
+  return (
+    <div className="cb5">
 
-        {/* The case being filled */}
-        <div className={`cb-fill-crate ${isFull ? 'cb-fill-crate-full' : ''}`}>
-          <div className="cb-fill-crate-header">
-            <input
-              type="text"
-              className="cb-fill-theme-input"
-              placeholder={`Case ${fillingIndex + 1} theme...`}
-              value={box.theme}
-              onChange={(e) => setTheme(fillingIndex, e.target.value)}
-            />
-            <span className={`cb-fill-count ${isFull ? 'cb-fill-count-full' : ''}`}>
-              {total}/12{price > 0 ? ` ~$${price}` : ''}
+      {/* ── Other cases (chips at top) ── */}
+      {boxes.length > 1 && (
+        <div className="cb5-sealed-strip">
+          {boxes.map((box, idx) => {
+            if (idx === activeIdx) return null;
+            const total = boxTotal(box);
+            if (total === 0 && !box.theme) return null;
+            const sealed = total >= 12;
+            return (
+              <button key={box.id} className={`cb5-sealed-chip ${sealed ? 'cb5-chip-sealed' : 'cb5-chip-partial'}`}
+                onClick={() => reopenBox(idx)}>
+                <span>{box.theme || `Case ${idx + 1}`}</span>
+                <span className="cb5-sealed-count">{total}{sealed ? '' : '/12'}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── The open box ── */}
+      <div className={`cb5-box ${activeFull ? 'cb5-box-sealed' : ''}`}>
+        {/* Lid (visible when sealed) */}
+        {activeFull && <div className="cb5-box-lid" />}
+
+        {/* Theme bar */}
+        <div className="cb5-theme-bar">
+          <div className="cb5-theme-display" onClick={() => { setThemeInput(activeBox.theme); setThemePopupOpen(true); }}>
+            <span className={`cb5-theme-text ${!activeBox.theme ? 'cb5-theme-placeholder' : ''} ${!activeBox.themeIsManual && activeBox.theme ? 'cb5-theme-remi' : ''}`}>
+              {activeBox.theme || 'Tap to name this case'}
             </span>
+            <span className="cb5-theme-arrow">&#9662;</span>
           </div>
+          <span className={`cb5-box-count ${activeFull ? 'cb5-box-count-full' : ''}`}>
+            {activeTotal}/12
+          </span>
+        </div>
 
-          {/* Progress bar */}
-          <div className="cb-fill-progress-track">
-            <div className={`cb-fill-progress-bar ${isFull ? 'cb-fill-progress-full' : ''}`}
-              style={{ width: `${(total / 12) * 100}%` }} />
-          </div>
+        {/* Progress bar */}
+        <div className="cb5-progress-track">
+          <div className={`cb5-progress-bar ${activeFull ? 'cb5-progress-full' : ''}`} style={{ width: `${(activeTotal / 12) * 100}%` }} />
+        </div>
 
-          {box.themeOptions.length > 0 && (
-            <div className="cb-fill-theme-chips">
-              {box.themeOptions.map((opt, i) => (
-                <button key={i} className={`cb-theme-chip ${box.theme === opt ? 'cb-theme-chip-active' : ''}`}
-                  onClick={() => setTheme(fillingIndex, opt)}>{opt}</button>
-              ))}
-            </div>
-          )}
-
-          {isFull && (
-            <div className="cb-fill-sealed">Case sealed — 12 bottles</div>
-          )}
-
-          {box.items.length > 0 ? (
-            <div className="cb-fill-wines">
-              {box.items.map((item, itemIdx) => (
-                <div key={itemIdx} className="cb-fill-wine-row">
-                  <div className="cb-fill-wine-dot" style={{ backgroundColor: WINE_DOT_COLORS[item.wineColor] || WINE_DOT_COLORS.red }} />
-                  <div className="cb-fill-wine-info">
-                    <span className="cb-fill-wine-name">{item.wineName}</span>
-                    {item.vintageYear && <span className="cb-fill-wine-year">{item.vintageYear}</span>}
-                    <button
-                      className={`cb-like-toggle ${item.isLikeThis ? 'cb-like-active' : ''}`}
-                      onClick={() => toggleLikeThis(fillingIndex, itemIdx)}
-                    >
-                      {item.isLikeThis ? 'or similar' : 'exact'}
-                    </button>
-                  </div>
-                  <div className="cb-fill-qty">
-                    <button className="cb-qty-btn" onClick={() => updateQuantity(fillingIndex, itemIdx, -1)}>&#8722;</button>
-                    <span className="cb-qty-num">{item.quantity}</span>
-                    <button className="cb-qty-btn" onClick={() => updateQuantity(fillingIndex, itemIdx, 1)} disabled={isFull}>+</button>
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* Wines in the box */}
+        <div className="cb5-box-contents">
+          {activeBox.items.length === 0 ? (
+            <p className="cb5-box-empty">Your case starts here</p>
           ) : (
-            <p className="cb-fill-empty">Tap a wine below to add it</p>
+            activeBox.items.map((item, idx) => (
+              <div key={idx} className="cb5-box-wine">
+                <span className="cb5-wine-dot" style={{ backgroundColor: DOT_COLORS[item.wineColor] || DOT_COLORS.red }} />
+                <div className="cb5-wine-info">
+                  <span className="cb5-wine-name">{item.wineName}</span>
+                  {item.vintageYear && <span className="cb5-wine-year">{item.vintageYear}</span>}
+                  <button className={`cb5-like-btn ${item.isLikeThis ? 'cb5-like-active' : ''}`}
+                    onClick={() => toggleLike(idx)}>
+                    {item.isLikeThis ? 'or similar' : 'exact'}
+                  </button>
+                </div>
+                <div className="cb5-wine-qty">
+                  <button className="cb5-qty-btn" onClick={() => updateQty(idx, -1)}>&#8722;</button>
+                  <span className="cb5-qty-num">{item.quantity}</span>
+                  <button className="cb5-qty-btn" onClick={() => updateQty(idx, 1)} disabled={activeFull}>+</button>
+                </div>
+              </div>
+            ))
           )}
         </div>
 
-        {/* Favorites list — full size, not a strip */}
-        {!isFull && (
-          <div className="cb-fill-favorites">
-            <div className="cb-fill-fav-header">
-              <h3 className="cb-fill-fav-title">Your Favorites</h3>
-              <div className="cb-fill-fav-filters">
-                <select value={minRating} onChange={(e) => onMinRatingChange(parseFloat(e.target.value))} className="cb-strip-select">
-                  {[6, 6.5, 7, 7.5, 8, 8.5, 9].map(r => <option key={r} value={r}>{r}+</option>)}
-                </select>
-                <select value={colorFilter} onChange={(e) => onColorFilterChange(e.target.value)} className="cb-strip-select">
-                  <option value="">All</option>
-                  <option value="red">Red</option>
-                  <option value="white">White</option>
-                  <option value="rose">Ros&eacute;</option>
-                  <option value="sparkling">Sparkling</option>
-                </select>
-              </div>
+        {/* Box footer */}
+        <div className="cb5-box-footer">
+          {price > 0 && <span className="cb5-box-price">~${price}</span>}
+          {activeFull ? (
+            <button className="cb5-next-box-btn" onClick={sealAndNext}>Start next case</button>
+          ) : activeBox.items.length > 0 ? (
+            <div className="cb5-box-footer-actions">
+              <button className="cb5-next-box-btn" onClick={sealAndNext}>Start another case</button>
+              {boxes.length > 1 && (
+                <button className="cb5-remove-box" onClick={() => removeBox(activeIdx)}>Remove</button>
+              )}
             </div>
-            <div className="cb-fill-fav-sorts">
-              {(['rating', 'price', 'name'] as const).map(field => (
-                <button key={field} className={`nc-sort-chip ${sortField === field ? 'nc-sort-chip-active' : ''}`}
-                  onClick={() => onToggleSort(field)}>
-                  {field === 'name' ? 'A-Z' : field.charAt(0).toUpperCase() + field.slice(1)}
-                  {sortField === field && <span className="nc-sort-arrow">{sortDir === 'desc' ? ' \u2193' : ' \u2191'}</span>}
+          ) : null}
+        </div>
+      </div>
+
+      {/* ── Wine wall (collection with filters) ── */}
+      {!activeFull && (
+        <div className="cb5-wall">
+          <div className="cb5-wall-header">
+            <input
+              type="search"
+              className="cb5-search"
+              placeholder="Search wines, regions, grapes..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            <div className="cb5-filters">
+              <select value={colorFilter} onChange={e => setColorFilter(e.target.value)} className="cb5-filter-select">
+                <option value="">Color</option>
+                <option value="red">Red</option>
+                <option value="white">White</option>
+                <option value="rose">Rosé</option>
+                <option value="sparkling">Sparkling</option>
+              </select>
+              <select value={regionFilter} onChange={e => setRegionFilter(e.target.value)} className="cb5-filter-select">
+                <option value="">Region</option>
+                {uniqueRegions.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+              <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)} className="cb5-filter-select">
+                <option value="">Source</option>
+                <option value="weimax">Weimax</option>
+                <option value="costco">Costco</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div className="cb5-sorts">
+              {(['rating', 'price', 'region', 'name'] as const).map(f => (
+                <button key={f} className={`cb5-sort-chip ${sortBy === f ? 'cb5-sort-active' : ''}`} onClick={() => toggleSort(f)}>
+                  {f === 'name' ? 'A-Z' : f.charAt(0).toUpperCase() + f.slice(1)}
+                  {sortBy === f && <span className="cb5-sort-arrow">{sortDir === 'desc' ? ' \u2193' : ' \u2191'}</span>}
                 </button>
               ))}
             </div>
-            {favoritesLoading ? (
-              <p className="nc-loading">Loading...</p>
-            ) : (
-              <div className="cb-fill-fav-list">
-                {favorites.map(wine => {
-                  const winePrice = getLatestPrice(wine);
-                  const isInThisCase = box.items.some(item => item.wineId === wine.id);
-                  const flashing = addedFlash === wine.id;
-                  return (
-                    <button
-                      key={wine.id}
-                      className={`cb-fill-fav-card card-tint-${wine.color} ${isInThisCase ? 'cb-fill-fav-added' : ''} ${flashing ? 'wine-card-added-flash' : ''}`}
-                      onClick={() => addWineToBox(wine)}
-                    >
-                      <div className="cb-fill-fav-top">
-                        <span className="cb-fill-fav-name">{wine.name}</span>
-                        {isInThisCase && <span className="cb-fill-fav-check">&#10003;</span>}
-                      </div>
-                      <div className="cb-fill-fav-meta">
+          </div>
+
+          {winesLoading ? (
+            <p className="cb5-loading">Loading your collection...</p>
+          ) : filteredWines.length === 0 ? (
+            <p className="cb5-no-results">No wines match these filters.</p>
+          ) : (
+            <div className="cb5-wine-list">
+              {filteredWines.map(wine => {
+                const wPrice = getWinePrice(wine);
+                const wRating = getWineRating(wine);
+                const inCase = activeBox.items.some(i => i.wineId === wine.id);
+                const flashing = addedFlash === wine.id;
+                return (
+                  <div key={wine.id}
+                    className={`cb5-wall-card card-tint-${wine.color} ${inCase ? 'cb5-wall-card-incase' : ''} ${flashing ? 'wine-card-added-flash' : ''}`}>
+                    <div className="cb5-wall-card-main" onClick={() => addWine(wine)}>
+                      <span className="cb5-wall-card-name">{wine.name}</span>
+                      <div className="cb5-wall-card-meta">
                         {wine.vintages && wine.vintages.length > 0 && (
                           <span>{wine.vintages.map(v => v.vintageYear).sort((a, b) => b - a)[0]}</span>
                         )}
-                        {wine.averageRating && <span>{wine.averageRating.toFixed(1)}</span>}
-                        {winePrice && <span>${winePrice}</span>}
+                        {wRating && <span>{wRating.toFixed(1)}</span>}
+                        {wPrice && <span>${wPrice}</span>}
+                        {wine.region && <span>{wine.region}</span>}
                       </div>
+                      {inCase && <span className="cb5-wall-card-check">&#10003;</span>}
+                    </div>
+                    <button className="cb5-wall-card-peek" onClick={() => setPeekWine(wine)} title="More info">
+                      &#8942;
                     </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Undo toast */}
-        {undoItem && (
-          <div className="cb-undo-toast">
-            <span>Removed {undoItem.item.wineName.length > 20 ? undoItem.item.wineName.slice(0, 20) + '...' : undoItem.item.wineName}</span>
-            <button className="cb-undo-btn" onClick={handleUndo}>Undo</button>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // ============================================================
-  // OVERVIEW MODE — see all your cases
-  // ============================================================
-  return (
-    <div className="cb-overview">
-      {/* Order summary */}
-      {hasAnyWines && (
-        <div className="cb-order-summary">
-          {totalBottles} bottles across {boxes.length} {boxes.length === 1 ? 'case' : 'cases'}
-          {totalPrice > 0 ? ` — ~$${totalPrice}` : ''}
-        </div>
-      )}
-
-      {/* Quick-start: when only 1 empty case, prompt for how many */}
-      {boxes.length === 1 && boxes[0].items.length === 0 && !boxes[0].theme && (
-        <div className="cb-quickstart">
-          <p className="cb-quickstart-prompt">How many cases are you planning?</p>
-          <div className="cb-quickstart-btns">
-            {[2, 3, 4].map(n => (
-              <button key={n} className="cb-quickstart-btn" onClick={() => {
-                setBoxes(prev => [...prev, ...Array(n - 1).fill(null).map(() => createEmptyBox())]);
-              }}>{n} cases</button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Case cards */}
-      {boxes.map((box, idx) => {
-        const total = getBoxTotal(box);
-        const price = getBoxPrice(box);
-        const isFull = total >= 12;
-        return (
-          <div key={box.id} className={`cb-case-card ${isFull ? 'cb-case-card-full' : ''} ${total === 0 ? 'cb-case-card-empty-tap' : ''}`}
-            onClick={total === 0 ? () => setFillingIndex(idx) : undefined}>
-            <div className="cb-case-card-header">
-              <input
-                type="text"
-                className="cb-case-card-theme"
-                placeholder={`Case ${idx + 1} — give it a theme`}
-                value={box.theme}
-                onChange={(e) => setTheme(idx, e.target.value)}
-              />
-              {box.items.length > 0 && (
-                <button
-                  className="cb-case-card-suggest"
-                  onClick={() => suggestThemes(idx)}
-                  disabled={themeSuggestingFor === idx}
-                >
-                  {themeSuggestingFor === idx ? '...' : 'Suggest'}
-                </button>
-              )}
-            </div>
-
-            {box.themeOptions.length > 0 && (
-              <div className="cb-case-card-chips">
-                {box.themeOptions.map((opt, i) => (
-                  <button key={i} className={`cb-theme-chip ${box.theme === opt ? 'cb-theme-chip-active' : ''}`}
-                    onClick={() => setTheme(idx, opt)}>{opt}</button>
-                ))}
-              </div>
-            )}
-
-            {/* Wine preview */}
-            <div className="cb-case-card-wines">
-              {box.items.length === 0 ? (
-                <p className="cb-case-card-empty">No wines yet</p>
-              ) : (
-                box.items.map((item, i) => (
-                  <div key={i} className="cb-case-card-wine">
-                    <span className="cb-case-card-dot" style={{ backgroundColor: WINE_DOT_COLORS[item.wineColor] || WINE_DOT_COLORS.red }} />
-                    <span className="cb-case-card-wine-name">{item.wineName}</span>
-                    {item.quantity > 1 && <span className="cb-case-card-qty">x{item.quantity}</span>}
-                    {item.isLikeThis && <span className="cb-case-card-similar">similar</span>}
                   </div>
-                ))
-              )}
+                );
+              })}
             </div>
+          )}
+        </div>
+      )}
 
-            {/* Footer */}
-            <div className="cb-case-card-footer">
-              <span className={`cb-case-card-count ${isFull ? 'cb-case-card-count-full' : ''}`}>
-                {total}/12{price > 0 ? ` ~$${price}` : ''}
-                {isFull && ' — Sealed'}
-              </span>
-              <div className="cb-case-card-actions">
-                <button className="cb-case-card-fill" onClick={() => setFillingIndex(idx)}>
-                  {isFull ? 'Edit' : total > 0 ? 'Continue' : 'Fill'}
-                </button>
-                {boxes.length > 1 && (
-                  <button className="cb-case-card-remove" onClick={() => removeCase(idx)}>&#10005;</button>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Add case button */}
-      <button className="cb-add-case" onClick={addCase}>
-        + Add another case
-      </button>
-
-      {/* Actions */}
-      <div className="cb-overview-actions">
-        {hasAnyWines && (
-          <button className="cb-email-btn" onClick={() => handleDraftEmail()} disabled={emailLoading}>
+      {/* ── Draft Email ── */}
+      {hasAnyWines && (
+        <div className="cb5-email-area">
+          <button className="cb5-email-btn" onClick={() => draftEmail()} disabled={emailLoading}>
             {emailLoading ? 'Remi is drafting...' : 'Draft Email to Gerald'}
           </button>
-        )}
-        {hasAnyWines && (
-          <button className="cb-action-text" onClick={handleClear}>Start over</button>
-        )}
-      </div>
-
-      {/* Undo toast */}
-      {undoItem && (
-        <div className="cb-undo-toast">
-          <span>Removed {undoItem.item.wineName.length > 20 ? undoItem.item.wineName.slice(0, 20) + '...' : undoItem.item.wineName}</span>
-          <button className="cb-undo-btn" onClick={handleUndo}>Undo</button>
         </div>
       )}
 
-      {/* Email modal */}
-      {showEmailDraft && (
-        <div className="cb-email-overlay" onClick={() => setShowEmailDraft(false)}>
-          <div className="cb-email-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="cb-email-header">
-              <h4>Email to Gerald</h4>
-              <button className="cb-email-close" onClick={() => setShowEmailDraft(false)}>&#10005;</button>
+      {/* ── Theme popup ── */}
+      {themePopupOpen && (
+        <div className="cb5-popup-overlay" onClick={() => setThemePopupOpen(false)}>
+          <div className="cb5-popup" onClick={e => e.stopPropagation()}>
+            <h4 className="cb5-popup-title">Case Theme</h4>
+            <input
+              type="text"
+              className="cb5-popup-input"
+              placeholder="Name this case..."
+              value={themeInput}
+              onChange={e => setThemeInput(e.target.value)}
+              autoFocus
+            />
+            <button className="cb5-popup-set" onClick={() => {
+              setTheme(themeInput, true);
+              setThemePopupOpen(false);
+            }}>Set Theme</button>
+
+            {activeBox.items.length > 0 && (
+              <>
+                <div className="cb5-popup-divider" />
+                <button className="cb5-popup-suggest" onClick={suggestThemes} disabled={themeSuggesting}>
+                  {themeSuggesting ? 'Thinking...' : 'Ask Remi for ideas'}
+                </button>
+                {activeBox.themeOptions.length > 0 && (
+                  <div className="cb5-popup-options">
+                    {activeBox.themeOptions.map((opt, i) => (
+                      <button key={i} className="cb5-popup-option" onClick={() => {
+                        setTheme(opt, false);
+                        setThemePopupOpen(false);
+                      }}>{opt}</button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            <button className="cb5-popup-close" onClick={() => setThemePopupOpen(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Peek card (back of the label) ── */}
+      {peekWine && (
+        <div className="cb5-popup-overlay" onClick={() => setPeekWine(null)}>
+          <div className="cb5-peek" onClick={e => e.stopPropagation()}>
+            <h4 className="cb5-peek-name">{peekWine.name}</h4>
+            <div className="cb5-peek-meta">
+              {peekWine.region && <span>{peekWine.region}</span>}
+              {peekWine.grapeVarietyOrBlend && <span>{peekWine.grapeVarietyOrBlend}</span>}
+              {peekWine.color && <span>{peekWine.color}</span>}
             </div>
-            <pre className="cb-email-body">{emailDraft}</pre>
-            <div className="cb-email-revision">
-              <input type="text" className="cb-revision-input" placeholder="Tell Remi: make it shorter, mention Friday..."
-                value={revisionInput} onChange={(e) => setRevisionInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && revisionInput.trim()) handleDraftEmail(revisionInput.trim()); }} />
-              <button className="cb-revise-btn" onClick={() => revisionInput.trim() && handleDraftEmail(revisionInput.trim())}
+            {getWineRating(peekWine) && (
+              <div className="cb5-peek-rating">Rating: {getWineRating(peekWine)!.toFixed(1)}</div>
+            )}
+            {getWinePrice(peekWine) && (
+              <div className="cb5-peek-price">Last price: ${getWinePrice(peekWine)}</div>
+            )}
+            {getWineLatestNote(peekWine) && (
+              <div className="cb5-peek-section">
+                <div className="cb5-peek-label">Your tasting note</div>
+                <p className="cb5-peek-text">{getWineLatestNote(peekWine)}</p>
+              </div>
+            )}
+            {getWineSellerNotes(peekWine) && (
+              <div className="cb5-peek-section">
+                <div className="cb5-peek-label">Gerald's notes</div>
+                <p className="cb5-peek-text">{getWineSellerNotes(peekWine)}</p>
+              </div>
+            )}
+            <div className="cb5-peek-actions">
+              {!activeFull && (
+                <button className="cb5-peek-add" onClick={() => { addWine(peekWine); setPeekWine(null); }}>
+                  Add to Case
+                </button>
+              )}
+              <button className="cb5-peek-close" onClick={() => setPeekWine(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Undo toast ── */}
+      {undoItem && (
+        <div className="cb5-undo">
+          <span>Removed {undoItem.item.wineName.length > 20 ? undoItem.item.wineName.slice(0, 20) + '...' : undoItem.item.wineName}</span>
+          <button className="cb5-undo-btn" onClick={handleUndo}>Undo</button>
+        </div>
+      )}
+
+      {/* ── Email modal ── */}
+      {showEmail && (
+        <div className="cb5-popup-overlay" onClick={() => setShowEmail(false)}>
+          <div className="cb5-email-modal" onClick={e => e.stopPropagation()}>
+            <div className="cb5-email-header">
+              <h4>Email to Gerald</h4>
+              <button onClick={() => setShowEmail(false)}>&#10005;</button>
+            </div>
+            <pre className="cb5-email-body">{emailDraft}</pre>
+            <div className="cb5-email-revision">
+              <input type="text" placeholder="Tell Remi: make it shorter, mention Friday..."
+                value={revisionInput} onChange={e => setRevisionInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && revisionInput.trim()) draftEmail(revisionInput.trim()); }} />
+              <button onClick={() => revisionInput.trim() && draftEmail(revisionInput.trim())}
                 disabled={!revisionInput.trim() || emailLoading}>Revise</button>
             </div>
-            <div className="cb-email-footer">
-              <button className="cb-copy-btn" onClick={handleCopy}>
+            <div className="cb5-email-footer">
+              <button className="cb5-copy-btn" onClick={copyEmail}>
                 {copied ? 'Copied! Paste into your email to Gerald' : 'Copy to Clipboard'}
               </button>
             </div>
