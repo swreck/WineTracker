@@ -235,6 +235,7 @@ export default function NextCase({ onSelectWine }: Props) {
                 const price = getLatestPrice(wine);
                 const isFlashing = addedFlash === wine.id;
                 const isInCase = wineIdsInCases.has(wine.id);
+                const bestVintage = wine.vintages?.map(v => v.vintageYear).sort((a, b) => b - a)[0];
                 return (
                   <button
                     key={wine.id}
@@ -243,6 +244,7 @@ export default function NextCase({ onSelectWine }: Props) {
                   >
                     <span className="cb-strip-name">{wine.name}</span>
                     <span className="cb-strip-meta">
+                      {bestVintage && <span>{bestVintage}</span>}
                       {wine.averageRating && <span>{wine.averageRating.toFixed(1)}</span>}
                       {price && <span>${price}</span>}
                     </span>

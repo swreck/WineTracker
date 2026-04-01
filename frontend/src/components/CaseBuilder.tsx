@@ -336,7 +336,7 @@ const CaseBuilder = forwardRef<CaseBuilderHandle, Props>(function CaseBuilder({ 
   return (
     <div className="cb-page">
       {/* The visual crate */}
-      <div className="cb-crate">
+      <div className={`cb-crate ${total === 12 ? 'cb-crate-closed' : ''}`}>
         {/* Theme area */}
         <div className="cb-crate-theme">
           <input
@@ -396,7 +396,7 @@ const CaseBuilder = forwardRef<CaseBuilderHandle, Props>(function CaseBuilder({ 
         <div className={`cb-crate-status ${total === 12 ? 'cb-crate-full' : ''}`}>
           <span>{total}/12 bottles</span>
           {boxPrice > 0 && <span>~${boxPrice}</span>}
-          {total === 12 && <span className="cb-full-label">Case full</span>}
+          {total === 12 && <span className="cb-full-label">Sealed</span>}
         </div>
 
         {/* Split note */}
@@ -471,13 +471,17 @@ const CaseBuilder = forwardRef<CaseBuilderHandle, Props>(function CaseBuilder({ 
           );
         })}
         <button className="cb-case-tab cb-case-tab-add" onClick={addCase}>+</button>
+      </div>
+
+      {/* Secondary actions — separated from primary flow */}
+      <div className="cb-secondary-actions">
         {boxes.length > 1 && (
-          <button
-            className="cb-case-tab-remove"
-            onClick={() => removeCase(activeIndex)}
-          >
-            Remove case
+          <button className="cb-action-text" onClick={() => removeCase(activeIndex)}>
+            Remove this case
           </button>
+        )}
+        {hasAnyWines && (
+          <button className="cb-action-text" onClick={handleClear}>Start over</button>
         )}
       </div>
 
@@ -489,19 +493,20 @@ const CaseBuilder = forwardRef<CaseBuilderHandle, Props>(function CaseBuilder({ 
         </div>
       )}
 
-      {/* Email button */}
-      {hasAnyWines && (
-        <button
-          className="cb-email-btn"
-          onClick={() => handleDraftEmail()}
-          disabled={emailLoading}
-        >
-          {emailLoading ? 'Remi is drafting...' : 'Draft Email to Gerald'}
-        </button>
-      )}
+      {/* Spacer for sticky footer */}
+      {hasAnyWines && <div style={{ height: 60 }} />}
 
+      {/* Sticky email button */}
       {hasAnyWines && (
-        <button className="cb-start-over" onClick={handleClear}>Start Over</button>
+        <div className="cb-sticky-footer">
+          <button
+            className="cb-email-btn"
+            onClick={() => handleDraftEmail()}
+            disabled={emailLoading}
+          >
+            {emailLoading ? 'Remi is drafting...' : 'Draft Email to Gerald'}
+          </button>
+        </div>
       )}
 
       {/* Email draft modal */}
