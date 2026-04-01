@@ -156,17 +156,19 @@ const CaseBuilder = forwardRef<CaseBuilderHandle, Props>(function CaseBuilder({ 
 
   // Remove wine from box — with undo
   const removeItem = useCallback((boxIdx: number, itemIdx: number) => {
+    // Capture item before modifying state (avoid side effects in updater)
+    const item = boxes[boxIdx]?.items[itemIdx];
+    if (!item) return;
+    setUndoItem({ boxIdx, item, position: itemIdx });
+    setTimeout(() => setUndoItem(null), 4000);
     setBoxes(prev => {
-      const item = prev[boxIdx].items[itemIdx];
-      setUndoItem({ boxIdx, item, position: itemIdx });
-      setTimeout(() => setUndoItem(null), 4000);
       const updated = [...prev];
       const box = { ...updated[boxIdx] };
       box.items = box.items.filter((_, i) => i !== itemIdx);
       updated[boxIdx] = box;
       return updated;
     });
-  }, []);
+  }, [boxes]);
 
   const handleUndo = useCallback(() => {
     if (!undoItem) return;
@@ -284,12 +286,17 @@ const CaseBuilder = forwardRef<CaseBuilderHandle, Props>(function CaseBuilder({ 
   }, [emailDraft]);
 
   const handleClear = useCallback(() => {
+    const totalBottles = boxes.reduce((sum, b) => sum + getBoxTotal(b), 0);
+    if (totalBottles > 0 && !window.confirm('Clear all cases and start over?')) {
+      return;
+    }
     setBoxes([createEmptyBox()]);
     setActiveIndex(0);
     setShowEmailDraft(false);
     setEmailDraft('');
+    setUndoItem(null);
     localStorage.removeItem(STORAGE_KEY);
-  }, []);
+  }, [boxes]);
 
   // Add a new case
   const addCase = useCallback(() => {
@@ -297,15 +304,21 @@ const CaseBuilder = forwardRef<CaseBuilderHandle, Props>(function CaseBuilder({ 
     setActiveIndex(boxes.length);
   }, [boxes.length]);
 
-  // Remove current case
+  // Remove current case — with confirmation
   const removeCase = useCallback((idx: number) => {
+    const box = boxes[idx];
+    const hasWines = box && box.items.length > 0;
+    if (hasWines && !window.confirm(`Remove Case ${idx + 1} and its ${getBoxTotal(box)} bottles?`)) {
+      return;
+    }
+    setUndoItem(null); // Clear undo to prevent restoring to wrong case
     if (boxes.length <= 1) {
       handleClear();
       return;
     }
     setBoxes(prev => prev.filter((_, i) => i !== idx));
     setActiveIndex(prev => Math.min(prev, boxes.length - 2));
-  }, [boxes.length, handleClear]);
+  }, [boxes, handleClear]);
 
   function getBoxPrice(box: CaseBox): number {
     return box.items.reduce((sum, item) => {
