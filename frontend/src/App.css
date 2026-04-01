@@ -4975,7 +4975,7 @@ textarea:focus-visible {
   width: 100%;
 }
 
-/* ===== CASE BUILDER ===== */
+/* ===== CASE BUILDER v4 ===== */
 
 /* Title row on Next Case page */
 .nc-title-row {
@@ -5000,7 +5000,7 @@ textarea:focus-visible {
   border: none;
 }
 
-/* Sort chips — own row */
+/* Sort chips */
 .nc-sort-row {
   display: flex;
   gap: 4px;
@@ -5026,11 +5026,9 @@ textarea:focus-visible {
   font-weight: 600;
 }
 
-.nc-sort-arrow {
-  font-size: 10px;
-}
+.nc-sort-arrow { font-size: 10px; }
 
-/* ===== FULL PAGE BUILDER ===== */
+/* ===== FULL PAGE BUILDER SHELL ===== */
 
 .cb-fullpage {
   display: flex;
@@ -5040,7 +5038,6 @@ textarea:focus-visible {
   animation: fadeIn 0.2s ease;
 }
 
-/* Top bar with back button */
 .cb-topbar {
   display: flex;
   align-items: center;
@@ -5063,161 +5060,54 @@ textarea:focus-visible {
   min-width: 60px;
 }
 
-/* Favorites strip */
-.cb-favorites-strip {
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--color-separator);
-  padding: 0 var(--space-4) var(--space-2);
-}
-
-.cb-strip-filters {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-  margin-bottom: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.cb-strip-select {
-  padding: 3px 6px;
-  border: 1px solid var(--color-separator-opaque);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg-elevated);
-  color: var(--color-text);
-  font-size: 12px;
-  min-height: 28px;
-}
-
-.cb-strip-sorts {
-  display: flex;
-  gap: 3px;
-}
-
-.cb-strip-scroll {
-  display: flex;
-  gap: var(--space-2);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: var(--space-2);
-  scroll-snap-type: x proximity;
-}
-
-.cb-strip-scroll::-webkit-scrollbar {
-  height: 3px;
-}
-
-.cb-strip-scroll::-webkit-scrollbar-thumb {
-  background: var(--color-separator-opaque);
-  border-radius: 2px;
-}
-
-.cb-strip-card {
-  flex: 0 0 auto;
-  min-width: 120px;
-  max-width: 160px;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-separator);
-  text-align: left;
-  position: relative;
-  scroll-snap-align: start;
-}
-
-.cb-strip-card:active {
-  transform: scale(0.96);
-  transition: transform 0.1s;
-}
-
-.cb-strip-card-added {
-  opacity: 0.6;
-}
-
-.cb-strip-name {
-  display: block;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  font-family: var(--font-family-wine);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.3;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: normal;
-  max-height: 2.6em;
-}
-
-.cb-strip-meta {
-  display: flex;
-  gap: var(--space-2);
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  margin-top: 2px;
-}
-
-.cb-strip-check {
-  position: absolute;
-  top: 4px;
-  right: 6px;
-  font-size: 11px;
-  color: rgba(46, 122, 58, 0.8);
-  font-weight: 700;
-}
-
-@keyframes addedFlash {
-  0% { box-shadow: 0 0 0 0 rgba(122, 46, 58, 0.4); }
-  50% { box-shadow: 0 0 0 4px rgba(122, 46, 58, 0.2); }
-  100% { box-shadow: 0 0 0 0 rgba(122, 46, 58, 0); }
-}
-
-.wine-card-added-flash {
-  animation: addedFlash 0.4s ease;
-}
-
-/* Main content area — scrollable */
 .cb-content {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-.cb-page {
+/* ===== OVERVIEW MODE ===== */
+
+.cb-overview {
   padding: var(--space-4);
 }
 
-/* ===== THE CRATE ===== */
+.cb-order-summary {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-4);
+  text-align: center;
+}
 
-.cb-crate {
-  background: var(--color-bg-elevated);
-  border: 2px solid var(--color-crate-border, #a0845c);
+/* Case card — looks like a wine crate */
+.cb-case-card {
+  border: 2px solid #a0845c;
   border-radius: var(--radius-lg);
+  background: var(--color-bg-elevated);
+  margin-bottom: var(--space-4);
   overflow: hidden;
-  box-shadow:
-    inset 0 0 0 1px rgba(160, 132, 92, 0.15),
-    0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.cb-case-card-full {
+  border-color: rgba(46, 122, 58, 0.5);
 }
 
 @media (prefers-color-scheme: dark) {
-  .cb-crate {
-    --color-crate-border: #7a6540;
-    border-color: var(--color-crate-border);
-    box-shadow:
-      inset 0 0 0 1px rgba(120, 100, 60, 0.2),
-      0 2px 8px rgba(0, 0, 0, 0.3);
-  }
+  .cb-case-card { border-color: #7a6540; }
+  .cb-case-card-full { border-color: rgba(46, 122, 58, 0.5); }
 }
 
-/* Theme input area */
-.cb-crate-theme {
+.cb-case-card-header {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid rgba(160, 132, 92, 0.2);
   background: rgba(160, 132, 92, 0.06);
+  border-bottom: 1px solid rgba(160, 132, 92, 0.15);
 }
 
-.cb-crate-theme-input {
+.cb-case-card-theme {
   flex: 1;
   border: none;
   background: transparent;
@@ -5225,16 +5115,16 @@ textarea:focus-visible {
   font-weight: 600;
   font-family: var(--font-family-wine);
   color: var(--color-text);
-  padding: var(--space-1) 0;
-  min-height: 32px;
+  padding: 0;
+  min-height: 28px;
 }
 
-.cb-crate-theme-input::placeholder {
+.cb-case-card-theme::placeholder {
   color: var(--color-text-tertiary);
   font-weight: 400;
 }
 
-.cb-crate-suggest {
+.cb-case-card-suggest {
   font-size: 12px;
   padding: 4px 10px;
   border-radius: var(--radius-full);
@@ -5246,17 +5136,15 @@ textarea:focus-visible {
   white-space: nowrap;
 }
 
-.cb-crate-suggest:disabled {
-  opacity: 0.5;
-}
+.cb-case-card-suggest:disabled { opacity: 0.5; }
 
-.cb-crate-theme-chips {
+.cb-case-card-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
   padding: var(--space-1) var(--space-4) var(--space-2);
   background: rgba(160, 132, 92, 0.06);
-  border-bottom: 1px solid rgba(160, 132, 92, 0.2);
+  border-bottom: 1px solid rgba(160, 132, 92, 0.15);
 }
 
 .cb-theme-chip {
@@ -5275,112 +5163,239 @@ textarea:focus-visible {
   border-color: var(--color-primary);
 }
 
-/* ===== BOTTLE GRID — the visual heart ===== */
-
-.cb-bottle-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  padding: var(--space-4);
-  justify-items: center;
-}
-
-.cb-bottle-slot {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.cb-bottle-empty {
-  width: 44px;
-  height: 44px;
-  border: 1.5px dashed rgba(160, 132, 92, 0.18);
-  background: rgba(160, 132, 92, 0.02);
-}
-
-.cb-bottle-filled {
-  border: none;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-  animation: bottleDrop 0.3s ease;
-}
-
-@keyframes bottleDrop {
-  from { transform: scale(0.5); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-.cb-bottle-initial {
-  color: rgba(255, 255, 255, 0.85);
-  font-family: var(--font-family-wine);
-  font-size: var(--font-size-md);
-  font-weight: 700;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-/* Status bar */
-.cb-crate-status {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-  border-top: 1px solid rgba(160, 132, 92, 0.15);
-}
-
-.cb-crate-full {
-  color: rgba(46, 122, 58, 0.8);
-  font-weight: 600;
-}
-
-/* When the crate is full, the grid collapses — the lid closes */
-.cb-crate-closed .cb-bottle-grid {
-  max-height: 0;
-  padding: 0;
-  overflow: hidden;
-  transition: max-height 0.4s ease, padding 0.4s ease;
-}
-
-.cb-crate-closed .cb-crate-status {
-  border-top: 3px solid rgba(46, 122, 58, 0.4);
-  background: rgba(46, 122, 58, 0.04);
-}
-
-.cb-full-label {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  background: rgba(46, 122, 58, 0.12);
-  color: rgba(46, 122, 58, 0.8);
-}
-
-/* Split note */
-.cb-crate-split {
-  width: 100%;
-  border: none;
-  border-top: 1px solid rgba(160, 132, 92, 0.15);
-  background: transparent;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+/* Wine list inside case card */
+.cb-case-card-wines {
   padding: var(--space-2) var(--space-4);
   min-height: 32px;
 }
 
-.cb-crate-split::placeholder {
+.cb-case-card-empty {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  font-style: italic;
+  margin: 0;
+  padding: var(--space-1) 0;
+}
+
+.cb-case-card-wine {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: var(--font-size-sm);
+}
+
+.cb-case-card-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cb-case-card-wine-name {
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cb-case-card-qty {
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.cb-case-card-similar {
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+}
+
+/* Case card footer */
+.cb-case-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid rgba(160, 132, 92, 0.15);
+  background: rgba(160, 132, 92, 0.03);
+}
+
+.cb-case-card-count {
+  font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
 }
 
-/* Wine list inside crate */
-.cb-crate-wines {
-  border-top: 1px solid rgba(160, 132, 92, 0.15);
+.cb-case-card-count-full {
+  color: rgba(46, 122, 58, 0.8);
+  font-weight: 600;
+}
+
+.cb-case-card-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.cb-case-card-fill {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  min-height: 36px;
+}
+
+.cb-case-card-remove {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  padding: var(--space-2);
+  min-height: 36px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Add case button */
+.cb-add-case {
+  width: 100%;
+  padding: var(--space-3);
+  border: 2px dashed rgba(160, 132, 92, 0.3);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  min-height: 48px;
+  background: transparent;
+  margin-bottom: var(--space-4);
+}
+
+/* Overview actions */
+.cb-overview-actions {
+  padding: var(--space-2) 0 var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.cb-email-btn {
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  min-height: 44px;
+}
+
+.cb-email-btn:disabled { opacity: 0.6; }
+
+.cb-action-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  padding: var(--space-2);
+  min-height: 32px;
+  border: none;
+  background: none;
+  text-align: center;
+}
+
+/* ===== FILL MODE ===== */
+
+.cb-fill-page {
+  padding: var(--space-4);
+}
+
+.cb-fill-back {
+  font-size: var(--font-size-md);
+  color: var(--color-primary);
+  font-weight: 600;
+  padding: 0 0 var(--space-3) 0;
+  min-height: 36px;
+}
+
+/* The case being filled */
+.cb-fill-crate {
+  border: 2px solid #a0845c;
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-elevated);
+  overflow: hidden;
+  margin-bottom: var(--space-4);
+}
+
+.cb-fill-crate-full {
+  border-color: rgba(46, 122, 58, 0.5);
+}
+
+@media (prefers-color-scheme: dark) {
+  .cb-fill-crate { border-color: #7a6540; }
+}
+
+.cb-fill-crate-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: rgba(160, 132, 92, 0.06);
+  border-bottom: 1px solid rgba(160, 132, 92, 0.15);
+}
+
+.cb-fill-theme-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  font-family: var(--font-family-wine);
+  color: var(--color-text);
+  padding: 0;
+  min-height: 28px;
+}
+
+.cb-fill-theme-input::placeholder {
+  color: var(--color-text-tertiary);
+  font-weight: 400;
+}
+
+.cb-fill-count {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.cb-fill-count-full {
+  color: rgba(46, 122, 58, 0.8);
+}
+
+.cb-fill-theme-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: var(--space-1) var(--space-4) var(--space-2);
+  background: rgba(160, 132, 92, 0.06);
+  border-bottom: 1px solid rgba(160, 132, 92, 0.15);
+}
+
+.cb-fill-sealed {
+  padding: var(--space-2) var(--space-4);
+  background: rgba(46, 122, 58, 0.06);
+  color: rgba(46, 122, 58, 0.8);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  text-align: center;
+  border-bottom: 1px solid rgba(46, 122, 58, 0.15);
+}
+
+.cb-fill-wines {
   padding: var(--space-2) var(--space-3);
 }
 
-.cb-wine-row {
+.cb-fill-wine-row {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -5388,18 +5403,16 @@ textarea:focus-visible {
   border-bottom: 1px solid var(--color-separator);
 }
 
-.cb-wine-row:last-child {
-  border-bottom: none;
-}
+.cb-fill-wine-row:last-child { border-bottom: none; }
 
-.cb-wine-color-dot {
+.cb-fill-wine-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.cb-wine-detail {
+.cb-fill-wine-info {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -5408,7 +5421,7 @@ textarea:focus-visible {
   gap: 4px;
 }
 
-.cb-wine-name {
+.cb-fill-wine-name {
   font-size: var(--font-size-sm);
   font-family: var(--font-family-wine);
   color: var(--color-text);
@@ -5417,7 +5430,7 @@ textarea:focus-visible {
   text-overflow: ellipsis;
 }
 
-.cb-wine-year {
+.cb-fill-wine-year {
   font-size: 11px;
   color: var(--color-text-tertiary);
 }
@@ -5446,7 +5459,7 @@ textarea:focus-visible {
   }
 }
 
-.cb-wine-qty {
+.cb-fill-qty {
   display: flex;
   align-items: center;
   gap: 2px;
@@ -5454,8 +5467,8 @@ textarea:focus-visible {
 }
 
 .cb-qty-btn {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-sm);
   background: var(--color-bg-secondary);
   color: var(--color-text);
@@ -5468,9 +5481,7 @@ textarea:focus-visible {
   min-width: 44px;
 }
 
-.cb-qty-btn:disabled {
-  opacity: 0.3;
-}
+.cb-qty-btn:disabled { opacity: 0.3; }
 
 .cb-qty-num {
   width: 24px;
@@ -5479,77 +5490,119 @@ textarea:focus-visible {
   font-weight: 600;
 }
 
-.cb-crate-empty {
+.cb-fill-empty {
   text-align: center;
-  padding: var(--space-4) var(--space-4) var(--space-6);
+  padding: var(--space-4);
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
   font-style: italic;
 }
 
-/* ===== CASE TABS ===== */
-
-.cb-case-tabs {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-4) 0;
-  flex-wrap: wrap;
+/* Favorites in fill mode — full-size cards */
+.cb-fill-favorites {
+  margin-top: var(--space-2);
 }
 
-.cb-case-tab {
-  padding: var(--space-2) var(--space-3);
+.cb-fill-fav-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.cb-fill-fav-title {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  margin: 0;
+}
+
+.cb-fill-fav-filters {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.cb-strip-select {
+  padding: 3px 6px;
+  border: 1px solid var(--color-separator-opaque);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
+  font-size: 12px;
+  min-height: 28px;
+}
+
+.cb-fill-fav-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-2);
+}
+
+.cb-fill-fav-card {
+  padding: var(--space-3);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-separator);
-  background: var(--color-bg-secondary);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  min-height: 40px;
+  text-align: left;
+  cursor: pointer;
+  min-height: 60px;
+}
+
+.cb-fill-fav-card:active {
+  transform: scale(0.97);
+  transition: transform 0.1s;
+}
+
+.cb-fill-fav-added {
+  opacity: 0.55;
+}
+
+.cb-fill-fav-top {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  justify-content: space-between;
+  align-items: flex-start;
 }
 
-.cb-case-tab-active {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+.cb-fill-fav-name {
+  font-family: var(--font-family-wine);
+  font-size: var(--font-size-sm);
   font-weight: 600;
-  background: var(--color-primary-subtle);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.cb-case-tab-full {
-  border-color: rgba(46, 122, 58, 0.5);
-}
-
-.cb-case-tab-active.cb-case-tab-full {
-  border-color: rgba(46, 122, 58, 0.7);
+.cb-fill-fav-check {
   color: rgba(46, 122, 58, 0.8);
-  background: rgba(46, 122, 58, 0.08);
-}
-
-.cb-tab-count {
-  font-size: 10px;
-  background: var(--color-primary-subtle);
-  color: var(--color-primary);
-  padding: 1px 5px;
-  border-radius: var(--radius-full);
   font-weight: 700;
+  font-size: var(--font-size-sm);
+  flex-shrink: 0;
+  margin-left: var(--space-2);
 }
 
-.cb-case-tab-add {
-  font-size: var(--font-size-lg);
-  font-weight: 300;
-  color: var(--color-text-tertiary);
-  border-style: dashed;
+.cb-fill-fav-meta {
+  display: flex;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
 }
 
-/* cb-case-tab-remove moved to secondary actions */
+@keyframes addedFlash {
+  0% { box-shadow: 0 0 0 0 rgba(122, 46, 58, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(122, 46, 58, 0.2); }
+  100% { box-shadow: 0 0 0 0 rgba(122, 46, 58, 0); }
+}
+
+.wine-card-added-flash {
+  animation: addedFlash 0.4s ease;
+}
 
 /* ===== UNDO TOAST ===== */
 
 .cb-undo-toast {
   position: fixed;
-  bottom: calc(100px + var(--safe-bottom, 0px));
+  bottom: calc(24px + var(--safe-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   background: var(--color-text);
@@ -5572,51 +5625,6 @@ textarea:focus-visible {
   font-size: var(--font-size-sm);
   padding: var(--space-1) var(--space-2);
   min-height: 32px;
-}
-
-/* ===== SECONDARY ACTIONS ===== */
-
-.cb-secondary-actions {
-  display: flex;
-  gap: var(--space-4);
-  justify-content: center;
-  padding: var(--space-2) 0 var(--space-4);
-}
-
-.cb-action-text {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  padding: var(--space-1);
-  min-height: 32px;
-  border: none;
-  background: none;
-}
-
-/* ===== STICKY EMAIL FOOTER ===== */
-
-.cb-sticky-footer {
-  position: sticky;
-  bottom: 0;
-  padding: var(--space-3) var(--space-4) calc(var(--space-3) + var(--safe-bottom, 0px));
-  background: var(--color-bg-elevated);
-  border-top: 1px solid var(--color-separator);
-  z-index: 10;
-}
-
-.cb-email-btn {
-  width: 100%;
-  padding: var(--space-3);
-  background: var(--color-primary);
-  color: var(--color-text-on-primary);
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  min-height: 44px;
-}
-
-.cb-email-btn:disabled {
-  opacity: 0.6;
 }
 
 /* ===== EMAIL MODAL ===== */
@@ -5713,9 +5721,7 @@ textarea:focus-visible {
   min-height: 40px;
 }
 
-.cb-revise-btn:disabled {
-  opacity: 0.4;
-}
+.cb-revise-btn:disabled { opacity: 0.4; }
 
 .cb-email-footer {
   padding: var(--space-3) var(--space-4) calc(var(--space-4) + var(--safe-bottom, 0px));
@@ -5735,9 +5741,8 @@ textarea:focus-visible {
 
 /* Tablet */
 @media (min-width: 768px) {
-  .cb-bottle-slot {
-    width: 60px;
-    height: 60px;
+  .cb-fill-fav-list {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   }
 
   .cb-email-modal {
