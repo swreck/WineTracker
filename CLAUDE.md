@@ -72,7 +72,7 @@ cd backend && npx prisma studio
 
 Single Railway service serves both frontend and API. Push to main triggers auto-deploy.
 
-- **URL**: `https://wine-tracker-backend-production.up.railway.app`
+- **URL**: `https://winetracker.up.railway.app`
 - **Railway project**: `wine-tracker`, service: `wine-tracker-backend`
 - **Root directory**: `backend/` (Railway config)
 - **Build**: `npm install → frontend build → copy dist to backend/public/ → prisma generate → tsc`
