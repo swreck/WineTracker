@@ -5300,6 +5300,13 @@ textarea:focus-visible {
 
 .cb5-box-count-full {
   color: rgba(46, 122, 58, 0.8);
+  animation: completePulse 0.6s ease;
+}
+
+@keyframes completePulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
 }
 
 /* Progress bar */
@@ -5381,12 +5388,13 @@ textarea:focus-visible {
 }
 
 .cb5-like-btn {
-  font-size: 10px;
-  padding: 1px 6px;
+  font-size: 11px;
+  padding: 4px 10px;
   border-radius: var(--radius-full);
   background: rgba(0,0,0,0.06);
   color: rgba(0,0,0,0.45);
   border: 1px solid rgba(0,0,0,0.1);
+  min-height: 28px;
 }
 
 .cb5-like-active {
@@ -5591,6 +5599,12 @@ textarea:focus-visible {
   color: var(--color-text-tertiary);
 }
 
+.cb5-result-count {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-2);
+}
+
 /* Wine cards in the wall */
 .cb5-wine-list {
   display: flex;
@@ -5690,6 +5704,9 @@ textarea:focus-visible {
   min-height: 44px;
 }
 .cb5-email-btn:disabled { opacity: 0.6; }
+.cb5-email-error {
+  background: var(--color-text-tertiary);
+}
 
 /* ── Popups (theme, peek, email) ── */
 
@@ -5744,6 +5761,8 @@ textarea:focus-visible {
   font-weight: 600;
   min-height: 40px;
 }
+
+.cb5-popup-set:disabled { opacity: 0.4; }
 
 .cb5-popup-divider {
   height: 1px;

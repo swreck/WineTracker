@@ -189,6 +189,10 @@ export default function Home({ onSelectWine, onNavigate, onOpenChat }: Props) {
             <span className="home-action-icon">🍷</span>
             <span>Browse</span>
           </button>
+          <button className="home-action-btn" onClick={() => onNavigate('build')}>
+            <span className="home-action-icon">📦</span>
+            <span>Build a Case</span>
+          </button>
         </div>
       </section>
 

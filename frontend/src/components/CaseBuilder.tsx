@@ -132,6 +132,7 @@ const CaseBuilder = forwardRef<CaseBuilderHandle>(function CaseBuilder(_props, r
   const [emailLoading, setEmailLoading] = useState(false);
   const [revisionInput, setRevisionInput] = useState('');
   const [copied, setCopied] = useState(false);
+  const [emailError, setEmailError] = useState(false);
 
   // Auto-suggest tracking
   const lastSeenRef = useRef({ activeIdx: 0, itemCount: 0 });
@@ -263,6 +264,8 @@ const CaseBuilder = forwardRef<CaseBuilderHandle>(function CaseBuilder(_props, r
     setBoxes(prev => {
       const updated = [...prev];
       const box = { ...updated[activeIdx] };
+      // Guard against race condition from rapid tapping
+      if (boxTotal(box) + delta > 12) return prev;
       box.items = [...box.items];
       box.items[itemIdx] = { ...box.items[itemIdx], quantity: box.items[itemIdx].quantity + delta };
       updated[activeIdx] = box;
@@ -361,6 +364,7 @@ const CaseBuilder = forwardRef<CaseBuilderHandle>(function CaseBuilder(_props, r
   // Email
   const draftEmail = useCallback(async (revision?: string) => {
     setEmailLoading(true);
+    setEmailError(false);
     try {
       const emailBoxes = boxes.filter(b => b.items.length > 0 || b.theme).map(b => ({
         theme: b.theme || 'Mixed case',
@@ -370,7 +374,10 @@ const CaseBuilder = forwardRef<CaseBuilderHandle>(function CaseBuilder(_props, r
       setEmailDraft(data.email);
       setShowEmail(true);
       setRevisionInput('');
-    } catch { /* silent */ }
+    } catch {
+      setEmailError(true);
+      setTimeout(() => setEmailError(false), 4000);
+    }
     setEmailLoading(false);
   }, [boxes]);
 
@@ -471,7 +478,7 @@ const CaseBuilder = forwardRef<CaseBuilderHandle>(function CaseBuilder(_props, r
 
           {/* Box footer */}
           <div className="cb5-box-footer">
-            {price > 0 && <span className="cb5-box-price">~${price}</span>}
+            {price > 0 && <span className="cb5-box-price">~${price} total</span>}
             {activeFull ? (
               <button className="cb5-next-box-btn" onClick={startNewCase}>Start next case</button>
             ) : activeBox.items.length > 0 ? (
@@ -488,8 +495,8 @@ const CaseBuilder = forwardRef<CaseBuilderHandle>(function CaseBuilder(_props, r
       {/* ── Draft Email (near the box, not after the wall) ── */}
       {hasAnyWines && (
         <div className="cb5-email-area">
-          <button className="cb5-email-btn" onClick={() => draftEmail()} disabled={emailLoading}>
-            {emailLoading ? 'Remi is drafting...' : 'Draft Email to Gerald'}
+          <button className={`cb5-email-btn ${emailError ? 'cb5-email-error' : ''}`} onClick={() => draftEmail()} disabled={emailLoading}>
+            {emailLoading ? 'Remi is drafting...' : emailError ? 'Couldn\'t reach Remi — tap to retry' : 'Draft Email to Gerald'}
           </button>
         </div>
       )}
@@ -567,7 +574,10 @@ const CaseBuilder = forwardRef<CaseBuilderHandle>(function CaseBuilder(_props, r
           <p className="cb5-loading">Loading your collection...</p>
         ) : filteredWines.length === 0 ? (
           <p className="cb5-no-results">No wines match these filters.</p>
-        ) : (
+        ) : (<>
+          {(colorFilter || regionFilter || sourceFilter || priceMin || priceMax || search) && (
+            <p className="cb5-result-count">{filteredWines.length} wine{filteredWines.length !== 1 ? 's' : ''}</p>
+          )}
           <div className="cb5-wine-list">
             {filteredWines.map(wine => {
               const wPrice = getWinePrice(wine);
@@ -598,7 +608,7 @@ const CaseBuilder = forwardRef<CaseBuilderHandle>(function CaseBuilder(_props, r
               );
             })}
           </div>
-        )}
+        </>)}
       </div>
 
       {/* ── Theme popup ── */}
@@ -638,11 +648,9 @@ const CaseBuilder = forwardRef<CaseBuilderHandle>(function CaseBuilder(_props, r
               }}
               autoFocus
             />
-            <button className="cb5-popup-set" onClick={() => {
-              if (themeInput.trim()) {
-                setTheme(themeInput.trim(), true);
-                setThemePopupOpen(false);
-              }
+            <button className="cb5-popup-set" disabled={!themeInput.trim()} onClick={() => {
+              setTheme(themeInput.trim(), true);
+              setThemePopupOpen(false);
             }}>Set Name</button>
 
             {/* Ask Remi button */}
