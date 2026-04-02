@@ -59,7 +59,8 @@ function loadBoxes(): CaseBox[] {
 }
 
 function saveBoxes(boxes: CaseBox[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ boxes }));
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ boxes })); }
+  catch { /* localStorage full — data is still in React state, just won't persist across reloads */ }
 }
 
 function getWinePrice(wine: Wine): number | null {
@@ -208,7 +209,7 @@ const CaseBuilder = forwardRef<CaseBuilderHandle>(function CaseBuilder(_props, r
       const updated = [...prev];
       const box = { ...updated[activeIdx] };
       if (boxTotal(box) >= 12) return prev;
-      const bestVintage = wine.vintages?.sort((a, b) => b.vintageYear - a.vintageYear)[0];
+      const bestVintage = wine.vintages ? [...wine.vintages].sort((a, b) => b.vintageYear - a.vintageYear)[0] : undefined;
       const existIdx = box.items.findIndex(i => i.wineId === wine.id);
       if (existIdx >= 0) {
         box.items = [...box.items];
@@ -478,7 +479,7 @@ const CaseBuilder = forwardRef<CaseBuilderHandle>(function CaseBuilder(_props, r
 
           {/* Box footer */}
           <div className="cb5-box-footer">
-            {price > 0 && <span className="cb5-box-price">~${price} total</span>}
+            {price > 0 && <span className="cb5-box-price">~${price.toLocaleString()} total</span>}
             {activeFull ? (
               <button className="cb5-next-box-btn" onClick={startNewCase}>Start next case</button>
             ) : activeBox.items.length > 0 ? (
@@ -573,7 +574,7 @@ const CaseBuilder = forwardRef<CaseBuilderHandle>(function CaseBuilder(_props, r
         {winesLoading ? (
           <p className="cb5-loading">Loading your collection...</p>
         ) : filteredWines.length === 0 ? (
-          <p className="cb5-no-results">No wines match these filters.</p>
+          <p className="cb5-no-results">{allWines.length === 0 ? 'No wines in your collection yet.' : 'No wines match these filters.'}</p>
         ) : (<>
           {(colorFilter || regionFilter || sourceFilter || priceMin || priceMax || search) && (
             <p className="cb5-result-count">{filteredWines.length} wine{filteredWines.length !== 1 ? 's' : ''}</p>
