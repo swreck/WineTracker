@@ -5017,7 +5017,7 @@ textarea:focus-visible {
   margin-bottom: var(--space-3);
   scrollbar-width: none;
   position: sticky;
-  top: calc(var(--safe-top, 0px) + 116px);
+  top: calc(var(--safe-top, 0px) + 90px);
   z-index: 10;
   background: var(--color-bg);
   border-bottom: 1px solid var(--color-separator);
