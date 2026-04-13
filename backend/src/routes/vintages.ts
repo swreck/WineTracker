@@ -103,7 +103,13 @@ router.put('/:id', async (req: Request, res: Response) => {
       },
     });
     res.json(vintage);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'P2002') {
+      return res.status(409).json({ error: 'This wine already has a vintage with that year.' });
+    }
+    if (error?.code === 'P2025') {
+      return res.status(404).json({ error: 'Vintage not found' });
+    }
     console.error('Error updating vintage:', error);
     res.status(500).json({ error: 'Failed to update vintage' });
   }

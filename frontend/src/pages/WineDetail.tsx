@@ -75,6 +75,13 @@ export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAbout
   });
   const [showEditRatingPicker, setShowEditRatingPicker] = useState(false);
 
+  // Vintage year editing
+  const [editingVintageYearId, setEditingVintageYearId] = useState<number | null>(null);
+  const [editVintageYearValue, setEditVintageYearValue] = useState('');
+
+  // Notes-tab multi-vintage picker for "+ Add Tasting"
+  const [notesPickerOpen, setNotesPickerOpen] = useState(false);
+
   // Detail tab state
   type DetailTab = 'notes' | 'gerald' | 'remi' | 'details';
   const [activeTab, setActiveTab] = useState<DetailTab>('notes');
@@ -232,6 +239,31 @@ export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAbout
       await loadWine();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete vintage');
+    }
+  }
+
+  // Vintage year edit
+  function startEditVintageYear(vintage: Vintage) {
+    setEditingVintageYearId(vintage.id);
+    setEditVintageYearValue(String(vintage.vintageYear));
+  }
+
+  async function handleSaveVintageYear(vintageId: number) {
+    const year = parseInt(editVintageYearValue, 10);
+    if (!year || year < 1900 || year > 2100) {
+      setError('Enter a year between 1900 and 2100');
+      return;
+    }
+    try {
+      await api.updateVintage(vintageId, { vintageYear: year } as any);
+      await loadWine();
+      setEditingVintageYearId(null);
+      setError(null);
+    } catch (e: any) {
+      const msg = e instanceof Error ? e.message : 'Failed to update vintage year';
+      setError(/already exists|unique|duplicate/i.test(msg)
+        ? `This wine already has a ${year} vintage.`
+        : msg);
     }
   }
 
@@ -468,6 +500,27 @@ export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAbout
     };
   }).filter(e => e.profile) || [];
 
+  const renderAddTastingForm = () => (
+    <div className="add-tasting-form">
+      <div className="date-row">
+        <input type="date" value={newTasting.tastingDate}
+          onChange={(e) => setNewTasting({ ...newTasting, tastingDate: e.target.value })} />
+        <button className="today-btn"
+          onClick={() => setNewTasting({ ...newTasting, tastingDate: new Date().toISOString().split('T')[0] })}>Today</button>
+      </div>
+      <button className={`inline-rating-btn ${newTasting.rating !== null ? 'has-rating' : ''}`}
+        onClick={() => setShowRatingPicker(true)}>
+        {newTasting.rating !== null ? newTasting.ratingLabel : 'Tap to rate'}
+      </button>
+      <AutoExpandTextarea placeholder="Notes (optional)" value={newTasting.notes}
+        onChange={(e) => setNewTasting({ ...newTasting, notes: e.target.value })} />
+      <div className="form-actions">
+        <button onClick={handleAddTasting}>Save</button>
+        <button onClick={() => setAddingTastingForVintage(null)}>Cancel</button>
+      </div>
+    </div>
+  );
+
   if (loading) return <div className="loading">Loading wine...</div>;
   if (error && !wine) return <div className="error">{error}</div>;
   if (!wine) return <div className="error">Wine not found</div>;
@@ -584,53 +637,36 @@ export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAbout
             )}
 
             {/* Add tasting button */}
-            {wine.vintages && wine.vintages.length > 0 && !addingTastingForVintage && (
+            {wine.vintages && wine.vintages.length > 0 && !addingTastingForVintage && !notesPickerOpen && (
               <button className="tab-action-btn" onClick={() => {
-                const v = wine.vintages!.length === 1 ? wine.vintages![0] : null;
-                if (v) startAddTasting(v.id);
-                else setActiveTab('details'); // go to details to pick vintage
+                if (wine.vintages!.length === 1) startAddTasting(wine.vintages![0].id);
+                else setNotesPickerOpen(true);
               }}>
                 + Add Tasting
               </button>
             )}
 
-            {/* Inline add tasting form */}
-            {addingTastingForVintage && (
-              <div className="add-tasting-form">
-                <div className="date-row">
-                  <input type="date" value={newTasting.tastingDate}
-                    onChange={(e) => setNewTasting({ ...newTasting, tastingDate: e.target.value })} />
-                  <button className="today-btn"
-                    onClick={() => setNewTasting({ ...newTasting, tastingDate: new Date().toISOString().split('T')[0] })}>Today</button>
-                </div>
-                <button className={`inline-rating-btn ${newTasting.rating !== null ? 'has-rating' : ''}`}
-                  onClick={() => setShowRatingPicker(true)}>
-                  {newTasting.rating !== null ? newTasting.ratingLabel : 'Tap to rate'}
-                </button>
-                <AutoExpandTextarea placeholder="Notes (optional)" value={newTasting.notes}
-                  onChange={(e) => setNewTasting({ ...newTasting, notes: e.target.value })} />
-                <div className="form-actions">
-                  <button onClick={handleAddTasting}>Save</button>
-                  <button onClick={() => setAddingTastingForVintage(null)}>Cancel</button>
+            {/* Vintage picker for multi-vintage wines */}
+            {notesPickerOpen && !addingTastingForVintage && wine.vintages && wine.vintages.length > 1 && (
+              <div className="vintage-picker">
+                <span className="vintage-picker-label">Which vintage?</span>
+                <div className="vintage-picker-options">
+                  {wine.vintages.map(v => (
+                    <button key={v.id} className="vintage-picker-btn"
+                      onClick={() => { setNotesPickerOpen(false); startAddTasting(v.id); }}>
+                      {v.vintageYear}
+                    </button>
+                  ))}
+                  <button className="vintage-picker-btn" onClick={() => setNotesPickerOpen(false)}>
+                    Cancel
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* Rating pickers */}
-            {showRatingPicker && (
-              <div className="rating-popup-overlay" onClick={() => setShowRatingPicker(false)}>
-                <div className="rating-popup" onClick={(e) => e.stopPropagation()}>
-                  <div className="rating-popup-header">Rate this wine</div>
-                  <div className="rating-options-grid">
-                    {ratingOptions.map((opt) => (
-                      <button key={opt.value}
-                        className={`rating-option ${newTasting.rating === opt.value ? 'selected' : ''} ${opt.value >= 8 ? 'high' : opt.value >= 5 ? 'mid' : 'low'}`}
-                        onClick={() => selectRating(opt.value, opt.label)}>{opt.label}</button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Inline add tasting form */}
+            {addingTastingForVintage && renderAddTastingForm()}
+
             {showEditRatingPicker && (
               <div className="rating-popup-overlay" onClick={() => setShowEditRatingPicker(false)}>
                 <div className="rating-popup" onClick={(e) => e.stopPropagation()}>
@@ -794,7 +830,20 @@ export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAbout
               {wine.vintages && wine.vintages.map((vintage) => (
                 <div key={vintage.id} className="detail-vintage-card">
                   <div className="detail-vintage-header">
-                    <span className="detail-vintage-year">{vintage.vintageYear}</span>
+                    {editingVintageYearId === vintage.id ? (
+                      <span className="inline-edit">
+                        <input type="number" value={editVintageYearValue}
+                          onChange={(e) => setEditVintageYearValue(e.target.value)}
+                          min={1900} max={2100} autoFocus style={{ width: '80px' }} />
+                        <button onClick={() => handleSaveVintageYear(vintage.id)}>Save</button>
+                        <button onClick={() => { setEditingVintageYearId(null); setError(null); }}>Cancel</button>
+                      </span>
+                    ) : (
+                      <span className="detail-vintage-year">
+                        {vintage.vintageYear}
+                        <button className="edit-inline-btn" onClick={() => startEditVintageYear(vintage)} title="Edit year">✎</button>
+                      </span>
+                    )}
                     {vintage.source && <span className="source-badge">{getSourceLabel(vintage.source, vintage.sourceCustom)}</span>}
                   </div>
 
@@ -899,7 +948,10 @@ export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAbout
                   )}
 
                   {/* Add tasting for this vintage */}
-                  <button className="small-btn" onClick={() => startAddTasting(vintage.id)}>+ Add Tasting</button>
+                  {addingTastingForVintage !== vintage.id && (
+                    <button className="small-btn" onClick={() => startAddTasting(vintage.id)}>+ Add Tasting</button>
+                  )}
+                  {addingTastingForVintage === vintage.id && renderAddTastingForm()}
 
                   <div className="detail-vintage-footer">
                     <label className="not-available-toggle">
@@ -918,6 +970,22 @@ export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAbout
           </div>
         )}
       </div>
+
+      {/* Rating picker — hoisted so it works from any tab */}
+      {showRatingPicker && (
+        <div className="rating-popup-overlay" onClick={() => setShowRatingPicker(false)}>
+          <div className="rating-popup" onClick={(e) => e.stopPropagation()}>
+            <div className="rating-popup-header">Rate this wine</div>
+            <div className="rating-options-grid">
+              {ratingOptions.map((opt) => (
+                <button key={opt.value}
+                  className={`rating-option ${newTasting.rating === opt.value ? 'selected' : ''} ${opt.value >= 8 ? 'high' : opt.value >= 5 ? 'mid' : 'low'}`}
+                  onClick={() => selectRating(opt.value, opt.label)}>{opt.label}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
