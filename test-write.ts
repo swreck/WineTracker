@@ -174,6 +174,62 @@ async function run() {
     }
   }
 
+  // ── Add vintage create/verify/delete ──
+  // Pick a year the wine doesn't already have.
+  let newVintageTestYear = 1902;
+  while (otherYears.includes(newVintageTestYear)) newVintageTestYear++;
+
+  let createdVintageId: number | null = null;
+  try {
+    await step(`POST /vintages creates a new vintage (year ${newVintageTestYear}) on the wine`, async () => {
+      const created = await req('/vintages', {
+        method: 'POST',
+        body: JSON.stringify({ wineId, vintageYear: newVintageTestYear }),
+      });
+      assert(!!created?.id, 'No id returned');
+      assert(created.vintageYear === newVintageTestYear, `Year mismatch: ${created.vintageYear}`);
+      createdVintageId = created.id;
+    });
+
+    await step('GET /wines/:id includes the new vintage', async () => {
+      if (!createdVintageId) throw new Error('skipped — create failed');
+      const wine = await req(`/wines/${wineId}`);
+      const found = wine.vintages.find((v: any) => v.id === createdVintageId);
+      assert(!!found, 'New vintage not in wine readback');
+      assert(found.vintageYear === newVintageTestYear, 'Year mismatch on readback');
+    });
+
+    await step('Add-vintage → tasting chain: POST tasting on the new vintage', async () => {
+      if (!createdVintageId) throw new Error('skipped — create failed');
+      const t = await req('/tastings', {
+        method: 'POST',
+        body: JSON.stringify({
+          vintageId: createdVintageId,
+          rating: 7,
+          notes: '[TEST] chained add-vintage→tasting',
+        }),
+      });
+      assert(!!t?.id, 'Chained tasting create failed');
+      // Clean up this tasting immediately — it lives under a vintage we're about to delete, but we'll be tidy.
+      await req(`/tastings/${t.id}`, { method: 'DELETE' });
+    });
+  } finally {
+    if (createdVintageId) {
+      try {
+        await req(`/wines/${wineId}/vintages/${createdVintageId}`, { method: 'DELETE' });
+        await step('Test vintage cleaned up', async () => {
+          const wine = await req(`/wines/${wineId}`);
+          const stillThere = wine.vintages.find((v: any) => v.id === createdVintageId);
+          assert(!stillThere, 'Test vintage still present after DELETE');
+        });
+      } catch (err: any) {
+        failed++;
+        console.log(`  FAIL  cleanup vintage id=${createdVintageId}: ${err.message}`);
+        console.log(`        Manual cleanup: DELETE ${BASE}/wines/${wineId}/vintages/${createdVintageId}`);
+      }
+    }
+  }
+
   console.log(`\n${passed} passed, ${failed} failed\n`);
   if (failed > 0) process.exit(1);
 }

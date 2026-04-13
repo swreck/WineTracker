@@ -36,7 +36,8 @@ export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAbout
   const [, setExpandedVintages] = useState<Set<number>>(new Set());
 
   // Add vintage state
-  const [addingVintage, setAddingVintage] = useState(false);
+  type AddVintageSource = 'hero' | 'picker' | 'details';
+  const [addingVintageFrom, setAddingVintageFrom] = useState<AddVintageSource | null>(null);
   const [newVintageYear, setNewVintageYear] = useState<number>(new Date().getFullYear());
 
   // Per-vintage editing states (keyed by vintage ID)
@@ -209,23 +210,32 @@ export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAbout
 
   // Add vintage
   async function handleAddVintage() {
-    if (!newVintageYear) {
-      setError('Please enter a vintage year');
+    if (!newVintageYear || newVintageYear < 1900 || newVintageYear > 2100) {
+      setError('Enter a year between 1900 and 2100');
       return;
     }
+    const source = addingVintageFrom;
     try {
       const vintage = await api.createVintage({
         wineId,
         vintageYear: newVintageYear,
       });
       await loadWine();
-      setAddingVintage(false);
+      setAddingVintageFrom(null);
       setNewVintageYear(new Date().getFullYear());
-      // Auto-expand the new vintage
       setExpandedVintages(prev => new Set(prev).add(vintage.id));
       setError(null);
+      // If the user came from the "Which vintage?" picker, they wanted to add
+      // a tasting for this new vintage — chain straight into that flow.
+      if (source === 'picker') {
+        setNotesPickerOpen(false);
+        startAddTasting(vintage.id);
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to add vintage');
+      const msg = e instanceof Error ? e.message : 'Failed to add vintage';
+      setError(/already exists|unique|duplicate/i.test(msg)
+        ? `${newVintageYear} already exists for this wine.`
+        : msg);
     }
   }
 
@@ -500,6 +510,18 @@ export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAbout
     };
   }).filter(e => e.profile) || [];
 
+  const renderAddVintageForm = () => (
+    <div className="add-vintage-form">
+      <input type="number" value={newVintageYear}
+        onChange={(e) => setNewVintageYear(parseInt(e.target.value, 10) || 0)}
+        placeholder="Year" min={1900} max={2100} autoFocus />
+      <div className="form-actions">
+        <button onClick={handleAddVintage}>Add</button>
+        <button onClick={() => { setAddingVintageFrom(null); setError(null); }}>Cancel</button>
+      </div>
+    </div>
+  );
+
   const renderAddTastingForm = () => (
     <div className="add-tasting-form">
       <div className="date-row">
@@ -555,7 +577,17 @@ export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAbout
         </div>
         <div className="wine-hero-vintages">
           {wine.vintages?.map(v => v.vintageYear).sort((a, b) => b - a).join(', ')}
+          {addingVintageFrom !== 'hero' && (
+            <button className="hero-add-vintage-btn" onClick={() => setAddingVintageFrom('hero')}>
+              + New
+            </button>
+          )}
         </div>
+        {addingVintageFrom === 'hero' && (
+          <div className="hero-add-vintage-wrap">
+            {renderAddVintageForm()}
+          </div>
+        )}
         {wine.averageRating && (
           <span className="wine-hero-rating">{wine.averageRating.toFixed(1)}</span>
         )}
@@ -657,10 +689,16 @@ export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAbout
                       {v.vintageYear}
                     </button>
                   ))}
-                  <button className="vintage-picker-btn" onClick={() => setNotesPickerOpen(false)}>
+                  {addingVintageFrom !== 'picker' && (
+                    <button className="vintage-picker-btn" onClick={() => setAddingVintageFrom('picker')}>
+                      + New
+                    </button>
+                  )}
+                  <button className="vintage-picker-btn" onClick={() => { setNotesPickerOpen(false); setAddingVintageFrom(null); }}>
                     Cancel
                   </button>
                 </div>
+                {addingVintageFrom === 'picker' && renderAddVintageForm()}
               </div>
             )}
 
@@ -812,20 +850,10 @@ export default function WineDetail({ wineId, onBack, onNavigateWine, onChatAbout
             <div className="detail-section">
               <div className="section-header">
                 <h4>Vintages</h4>
-                <button className="small-btn" onClick={() => setAddingVintage(true)}>+ Add</button>
+                <button className="small-btn" onClick={() => setAddingVintageFrom('details')}>+ Add</button>
               </div>
 
-              {addingVintage && (
-                <div className="add-vintage-form">
-                  <input type="number" value={newVintageYear}
-                    onChange={(e) => setNewVintageYear(parseInt(e.target.value, 10) || 0)}
-                    placeholder="Year" min={1900} max={2100} />
-                  <div className="form-actions">
-                    <button onClick={handleAddVintage}>Add</button>
-                    <button onClick={() => setAddingVintage(false)}>Cancel</button>
-                  </div>
-                </div>
-              )}
+              {addingVintageFrom === 'details' && renderAddVintageForm()}
 
               {wine.vintages && wine.vintages.map((vintage) => (
                 <div key={vintage.id} className="detail-vintage-card">
